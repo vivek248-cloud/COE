@@ -1,0 +1,357 @@
+/* =========================================================
+   TEACHING STAFF DASHBOARD
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   Dashboard page wrapper
+--------------------------------------------------------- */
+
+.qps-main .container-fluid {
+    max-width: 1500px;
+}
+
+
+/* ---------------------------------------------------------
+   Dashboard heading
+--------------------------------------------------------- */
+
+.qps-main h1.h3 {
+    margin: 0;
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #111827;
+}
+
+.qps-main .text-muted {
+    color: #6b7280 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Course grid
+--------------------------------------------------------- */
+
+.qps-main .row.g-4 {
+    --bs-gutter-x: 1.25rem;
+    --bs-gutter-y: 1.25rem;
+}
+
+
+/* ---------------------------------------------------------
+   Course card
+--------------------------------------------------------- */
+
+.qps-main .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.qps-main .card:hover {
+    transform: translateY(-2px);
+    border-color: #dbe3f0;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+}
+
+.qps-main .card-body {
+    padding: 24px;
+}
+
+
+/* ---------------------------------------------------------
+   Academic year badge
+--------------------------------------------------------- */
+
+.qps-main .badge.text-bg-primary {
+    padding: 6px 10px;
+    border-radius: 7px;
+
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+
+/* ---------------------------------------------------------
+   Course title
+--------------------------------------------------------- */
+
+.qps-main .card-title {
+    color: #111827;
+    font-size: 1.25rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.qps-main .card-body > .d-flex .fw-semibold {
+    color: #374151;
+    font-size: 0.94rem;
+}
+
+
+/* ---------------------------------------------------------
+   Submission status
+--------------------------------------------------------- */
+
+.qps-main .badge.text-bg-success,
+.qps-main .badge.text-bg-secondary {
+    padding: 7px 10px;
+    border-radius: 7px;
+
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+
+/* ---------------------------------------------------------
+   Course information boxes
+--------------------------------------------------------- */
+
+.qps-main .border.rounded.p-2 {
+    min-height: 68px;
+
+    border-color: #e5e7eb !important;
+    border-radius: 9px !important;
+
+    background: #f8fafc;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.qps-main .border.rounded.p-2:hover {
+    background: #f1f5f9;
+    border-color: #d8dee8 !important;
+}
+
+.qps-main .border.rounded.p-2 .small {
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+.qps-main .border.rounded.p-2 .fw-semibold {
+    color: #111827;
+    font-size: 0.85rem;
+    line-height: 1.25;
+}
+
+
+/* ---------------------------------------------------------
+   Question count
+--------------------------------------------------------- */
+
+.qps-main .border.rounded.p-2 .fw-semibold {
+    font-weight: 700 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Question status counters
+--------------------------------------------------------- */
+
+.qps-main .row.text-center .bg-light {
+    min-height: 70px;
+
+    border: 1px solid #edf0f4;
+
+    background: #f8fafc !important;
+    border-radius: 9px !important;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.qps-main .row.text-center .bg-light:hover {
+    background: #f1f5f9 !important;
+    border-color: #e1e6ee;
+}
+
+.qps-main .row.text-center .fw-bold {
+    color: #111827;
+    font-size: 1.15rem;
+    line-height: 1.2;
+}
+
+.qps-main .row.text-center .small {
+    margin-top: 4px;
+    font-size: 0.68rem;
+}
+
+
+/* ---------------------------------------------------------
+   Action buttons
+--------------------------------------------------------- */
+
+.qps-main .btn {
+    min-height: 40px;
+
+    padding: 9px 15px;
+
+    border-radius: 8px;
+
+    font-size: 0.84rem;
+    font-weight: 600;
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
+}
+
+.qps-main .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.qps-main .btn-primary {
+    box-shadow: 0 3px 10px rgba(13, 110, 253, 0.15);
+}
+
+.qps-main .btn-primary:hover {
+    box-shadow: 0 5px 14px rgba(13, 110, 253, 0.2);
+}
+
+.qps-main .btn-outline-primary:hover {
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12);
+}
+
+
+/* ---------------------------------------------------------
+   No courses alert
+--------------------------------------------------------- */
+
+.qps-main .alert {
+    border-radius: 12px;
+    border: 1px solid #dbeafe;
+
+    padding: 20px 22px;
+
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.qps-main .alert-heading {
+    margin-bottom: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+
+/* ---------------------------------------------------------
+   Dashboard spacing
+--------------------------------------------------------- */
+
+.qps-main .container-fluid.py-4 {
+    padding-top: 30px !important;
+    padding-bottom: 40px !important;
+}
+
+
+/* ---------------------------------------------------------
+   Desktop
+--------------------------------------------------------- */
+
+@media (min-width: 1200px) {
+
+    .qps-main .container-fluid.py-4 {
+        padding-left: 30px !important;
+        padding-right: 30px !important;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Tablet
+--------------------------------------------------------- */
+
+@media (max-width: 991.98px) {
+
+    .qps-main .container-fluid.py-4 {
+        padding-top: 24px !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+
+    .qps-main h1.h3 {
+        font-size: 1.45rem;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Mobile
+--------------------------------------------------------- */
+
+@media (max-width: 575.98px) {
+
+    .qps-main .container-fluid.py-4 {
+        padding-top: 20px !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+
+    .qps-main h1.h3 {
+        font-size: 1.3rem;
+    }
+
+    .qps-main .card-body {
+        padding: 18px;
+    }
+
+    .qps-main .card-body > .d-flex {
+        gap: 12px;
+    }
+
+    .qps-main .card-body > .d-flex .badge {
+        font-size: 0.64rem;
+    }
+
+    .qps-main .card-title {
+        font-size: 1.1rem;
+    }
+
+    .qps-main .row.text-center .bg-light {
+        min-height: 64px;
+    }
+
+    .qps-main .btn {
+        width: 100%;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Accessibility
+--------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .qps-main .card,
+    .qps-main .btn,
+    .qps-main .border.rounded.p-2,
+    .qps-main .row.text-center .bg-light {
+        transition: none;
+    }
+
+    .qps-main .card:hover,
+    .qps-main .btn:hover:not(:disabled) {
+        transform: none;
+    }
+
+}

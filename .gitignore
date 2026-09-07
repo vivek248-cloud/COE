@@ -1,0 +1,34 @@
+# Composer
+/vendor/
+
+# Environment / local configuration
+.env
+.env.*
+!.env.example
+
+# Local uploads / generated files
+/storage/uploads/
+/storage/
+uploads/
+
+# Database backups / dumps
+*.sql
+*.sql.zip
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# PHP local files
+.phpunit.result.cache

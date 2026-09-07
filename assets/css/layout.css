@@ -1,0 +1,754 @@
+/* =========================================================
+   QUESTION PAPER SYSTEM
+   GLOBAL APPLICATION LAYOUT
+========================================================= */
+
+:root {
+
+    --qps-primary: #2563eb;
+    --qps-primary-dark: #1d4ed8;
+
+    --qps-sidebar: #111827;
+    --qps-sidebar-hover: #1f2937;
+
+    --qps-background: #f8fafc;
+    --qps-white: #ffffff;
+
+    --qps-text: #172033;
+    --qps-muted: #64748b;
+
+    --qps-border: #e2e8f0;
+
+    --qps-danger: #dc2626;
+
+    --qps-sidebar-width: 250px;
+
+    --qps-header-height: 68px;
+
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+}
+
+
+body {
+
+    background: var(--qps-background);
+
+    color: var(--qps-text);
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.qps-app {
+
+    min-height: 100vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.qps-header {
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1000;
+
+    height: var(--qps-header-height);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 0 24px;
+
+    background: var(--qps-white);
+
+    border-bottom: 1px solid var(--qps-border);
+
+}
+
+
+/* =========================================================
+   HEADER LEFT
+========================================================= */
+
+.qps-header-left {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 16px;
+
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.qps-brand {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+
+    color: var(--qps-text);
+
+    text-decoration: none;
+
+}
+
+
+.qps-brand-icon {
+
+    width: 38px;
+
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 10px;
+
+    background: var(--qps-primary);
+
+    color: white;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    letter-spacing: -0.5px;
+
+}
+
+
+.qps-brand-text {
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+
+.qps-brand-title {
+
+    font-size: 15px;
+
+    font-weight: 750;
+
+    line-height: 1.2;
+
+}
+
+
+.qps-brand-subtitle {
+
+    margin-top: 2px;
+
+    color: var(--qps-muted);
+
+    font-size: 10px;
+
+    line-height: 1.2;
+
+}
+
+
+/* =========================================================
+   SIDEBAR TOGGLE
+========================================================= */
+
+.qps-sidebar-toggle {
+
+    width: 38px;
+
+    height: 38px;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+    padding: 0;
+
+    border: 1px solid var(--qps-border);
+
+    border-radius: 8px;
+
+    background: white;
+
+    cursor: pointer;
+
+}
+
+
+.qps-sidebar-toggle span {
+
+    width: 17px;
+
+    height: 2px;
+
+    background: #475569;
+
+    border-radius: 2px;
+
+}
+
+
+/* =========================================================
+   HEADER RIGHT
+========================================================= */
+
+.qps-header-right {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+}
+
+
+/* =========================================================
+   USER
+========================================================= */
+
+.qps-user {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+
+.qps-user-avatar {
+
+    width: 36px;
+
+    height: 36px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: var(--qps-primary);
+
+    color: white;
+
+    font-size: 13px;
+
+    font-weight: 750;
+
+}
+
+
+.qps-user-details {
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+
+.qps-user-name {
+
+    color: var(--qps-text);
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+}
+
+
+.qps-user-role {
+
+    margin-top: 1px;
+
+    color: var(--qps-muted);
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: .4px;
+
+}
+
+
+/* =========================================================
+   HEADER LOGOUT
+========================================================= */
+
+.qps-header-logout {
+
+    padding: 8px 13px;
+
+    border: 1px solid var(--qps-border);
+
+    border-radius: 8px;
+
+    color: #475569;
+
+    font-size: 12px;
+
+    font-weight: 650;
+
+    text-decoration: none;
+
+    transition: .18s ease;
+
+}
+
+
+.qps-header-logout:hover {
+
+    color: var(--qps-danger);
+
+    border-color: #fecaca;
+
+    background: #fef2f2;
+
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+
+.qps-layout {
+
+    display: flex;
+
+    flex: 1;
+
+    min-height: calc(
+        100vh - var(--qps-header-height)
+    );
+
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.qps-sidebar {
+
+    position: fixed;
+
+    top: var(--qps-header-height);
+
+    bottom: 0;
+
+    left: 0;
+
+    z-index: 900;
+
+    width: var(--qps-sidebar-width);
+
+    background: var(--qps-sidebar);
+
+    overflow-y: auto;
+
+}
+
+
+.qps-sidebar-inner {
+
+    display: flex;
+
+    flex-direction: column;
+
+    min-height: 100%;
+
+    padding: 22px 14px;
+
+}
+
+
+/* =========================================================
+   SIDEBAR SECTION
+========================================================= */
+
+.qps-sidebar-section {
+
+    margin-bottom: 28px;
+
+}
+
+
+.qps-sidebar-account {
+
+    margin-top: auto;
+
+    margin-bottom: 0;
+
+}
+
+
+.qps-sidebar-label {
+
+    margin: 0 10px 9px;
+
+    color: #64748b;
+
+    font-size: 10px;
+
+    font-weight: 750;
+
+    text-transform: uppercase;
+
+    letter-spacing: 1px;
+
+}
+
+
+/* =========================================================
+   SIDEBAR LINK
+========================================================= */
+
+.qps-sidebar-link {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+
+    min-height: 43px;
+
+    margin-bottom: 3px;
+
+    padding: 0 11px;
+
+    border-radius: 8px;
+
+    color: #cbd5e1;
+
+    text-decoration: none;
+
+    font-size: 13px;
+
+    font-weight: 550;
+
+    transition:
+        background .18s ease,
+        color .18s ease;
+
+}
+
+
+.qps-sidebar-link:hover {
+
+    background: var(--qps-sidebar-hover);
+
+    color: white;
+
+}
+
+
+.qps-sidebar-link.active {
+
+    background: var(--qps-primary);
+
+    color: white;
+
+    font-weight: 650;
+
+}
+
+
+/* =========================================================
+   SIDEBAR ICON
+========================================================= */
+
+.qps-sidebar-icon {
+
+    width: 23px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 16px;
+
+    line-height: 1;
+
+}
+
+
+.qps-sidebar-logout:hover {
+
+    background: #3f1d1d;
+
+    color: #fecaca;
+
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.qps-main {
+
+    width: 100%;
+
+    min-width: 0;
+
+    margin-left: var(--qps-sidebar-width);
+
+}
+
+
+.qps-content {
+
+    width: min(
+        1240px,
+        calc(100% - 48px)
+    );
+
+    margin: 0 auto;
+
+    padding: 30px 0 50px;
+
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.qps-footer {
+
+    min-height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-left: var(--qps-sidebar-width);
+
+    padding: 0 28px;
+
+    background: white;
+
+    border-top: 1px solid var(--qps-border);
+
+    color: var(--qps-muted);
+
+    font-size: 11px;
+
+}
+
+
+/* =========================================================
+   SIDEBAR OVERLAY
+========================================================= */
+
+.qps-sidebar-overlay {
+
+    display: none;
+
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .qps-sidebar-toggle {
+
+        display: flex;
+
+    }
+
+
+    .qps-sidebar {
+
+        transform: translateX(-100%);
+
+        transition:
+            transform .22s ease;
+
+    }
+
+
+    .qps-sidebar.is-open {
+
+        transform: translateX(0);
+
+    }
+
+
+    .qps-main {
+
+        margin-left: 0;
+
+    }
+
+
+    .qps-footer {
+
+        margin-left: 0;
+
+    }
+
+
+    .qps-sidebar-overlay {
+
+        position: fixed;
+
+        inset: var(--qps-header-height) 0 0 0;
+
+        z-index: 850;
+
+        background: rgba(15, 23, 42, .45);
+
+        opacity: 0;
+
+        pointer-events: none;
+
+        display: block;
+
+        transition: opacity .2s ease;
+
+    }
+
+
+    .qps-sidebar-overlay.is-visible {
+
+        opacity: 1;
+
+        pointer-events: auto;
+
+    }
+
+}
+
+
+@media (max-width: 650px) {
+
+    .qps-header {
+
+        padding: 0 14px;
+
+    }
+
+
+    .qps-brand-subtitle {
+
+        display: none;
+
+    }
+
+
+    .qps-user-details {
+
+        display: none;
+
+    }
+
+
+    .qps-header-right {
+
+        gap: 8px;
+
+    }
+
+
+    .qps-header-logout {
+
+        display: none;
+
+    }
+
+
+    .qps-content {
+
+        width: calc(100% - 24px);
+
+        padding-top: 22px;
+
+    }
+
+
+    .qps-footer {
+
+        padding: 0 14px;
+
+    }
+
+}
