@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -21,6 +22,7 @@ if ($userId <= 0) {
 
 $pageTitle = 'Teaching Staff Dashboard';
 $activeMenu = 'dashboard';
+
 $pageCss = [
     'teaching-dashboard.css',
 ];
@@ -35,13 +37,8 @@ ob_start();
 
 /*
 |--------------------------------------------------------------------------
-| Load courses assigned to the logged-in teaching staff
+| Load courses assigned to logged-in teaching staff
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| We never trust a user-supplied user_id here.
-| The user ID comes only from the authenticated session.
-|
 */
 
 $stmt = $db->prepare(
@@ -104,7 +101,7 @@ $assignedCourses = $stmt->fetchAll();
 
 /*
 |--------------------------------------------------------------------------
-| Question counts
+| Question bank statistics
 |--------------------------------------------------------------------------
 */
 
@@ -184,43 +181,174 @@ foreach ($assignedCourses as $course) {
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard totals
+|--------------------------------------------------------------------------
+*/
+
+$totalCourses = count($assignedCourses);
+$totalBanks = count($bankStats);
+
+$totalQuestions = 0;
+$totalDraft = 0;
+$totalSubmitted = 0;
+$totalReview = 0;
+$totalApproved = 0;
+
+foreach ($bankStats as $bank) {
+
+    $totalQuestions += (int) $bank['actual_question_count'];
+
+    $totalDraft += (int) $bank['draft_count'];
+
+    $totalSubmitted += (int) $bank['submitted_count'];
+
+    $totalReview += (int) $bank['review_count'];
+
+    $totalApproved += (int) $bank['approved_count'];
+}
+
+/*
+|--------------------------------------------------------------------------
+| User display
+|--------------------------------------------------------------------------
+*/
+
+$displayName = $_SESSION['full_name']
+    ?? $_SESSION['username']
+    ?? 'Teaching Staff';
+
+$username = $_SESSION['username'] ?? '';
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard UI
+|--------------------------------------------------------------------------
+*/
+
 ?>
 
-<div class="container-fluid py-4">
+<div class="container-fluid">
 
     <!-- =====================================================
          PAGE HEADER
     ====================================================== -->
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="teaching-dashboard-header">
 
-        <div>
+        <div class="teaching-dashboard-heading">
 
-            <h1 class="h3 mb-1">
+            <div class="teaching-welcome">
+                Welcome back, <?= e($displayName) ?>
+            </div>
+
+            <h1>
                 Teaching Staff Dashboard
             </h1>
 
-            <p class="text-muted mb-0">
+            <p>
                 Manage your assigned courses and question submissions.
             </p>
 
         </div>
 
-        <div class="text-end">
+    </div>
 
-            <div class="fw-semibold">
-                <?= e(
-                    $_SESSION['full_name']
-                    ?? $_SESSION['username']
-                    ?? 'Teaching Staff'
-                ) ?>
+
+    <!-- =====================================================
+         STATISTICS
+    ====================================================== -->
+
+    <div class="teaching-stats">
+
+        <!-- Courses -->
+
+        <div class="teaching-stat-card">
+
+            <div class="teaching-stat-icon">
+                ▦
             </div>
 
-            <div class="small text-muted">
-                <?= e(
-                    $_SESSION['username']
-                    ?? ''
-                ) ?>
+            <div class="teaching-stat-content">
+
+                <span class="teaching-stat-label">
+                    Assigned Courses
+                </span>
+
+                <span class="teaching-stat-value">
+                    <?= $totalCourses ?>
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Question Banks -->
+
+        <div class="teaching-stat-card">
+
+            <div class="teaching-stat-icon">
+                ▤
+            </div>
+
+            <div class="teaching-stat-content">
+
+                <span class="teaching-stat-label">
+                    Question Banks
+                </span>
+
+                <span class="teaching-stat-value">
+                    <?= $totalBanks ?>
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Questions -->
+
+        <div class="teaching-stat-card">
+
+            <div class="teaching-stat-icon">
+                #
+            </div>
+
+            <div class="teaching-stat-content">
+
+                <span class="teaching-stat-label">
+                    Total Questions
+                </span>
+
+                <span class="teaching-stat-value">
+                    <?= $totalQuestions ?>
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Approved -->
+
+        <div class="teaching-stat-card">
+
+            <div class="teaching-stat-icon">
+                ✓
+            </div>
+
+            <div class="teaching-stat-content">
+
+                <span class="teaching-stat-label">
+                    Approved Questions
+                </span>
+
+                <span class="teaching-stat-value">
+                    <?= $totalApproved ?>
+                </span>
+
             </div>
 
         </div>
@@ -229,21 +357,45 @@ foreach ($assignedCourses as $course) {
 
 
     <!-- =====================================================
-         NO COURSE ASSIGNMENTS
+         ASSIGNED COURSES
+    ====================================================== -->
+
+    <div class="teaching-section-header">
+
+        <div>
+
+            <h2 class="teaching-section-title">
+                My Assigned Courses
+            </h2>
+
+            <p class="teaching-section-subtitle">
+                Courses currently assigned to your account.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         NO COURSES
     ====================================================== -->
 
     <?php if (!$assignedCourses): ?>
 
-        <div class="alert alert-info">
+        <div class="teaching-empty-state">
 
-            <h5 class="alert-heading">
+            <div class="teaching-empty-state-icon">
+                ▦
+            </div>
+
+            <h3>
                 No courses assigned
-            </h5>
+            </h3>
 
-            <p class="mb-0">
-                You currently do not have any active course assignments
-                for this account.
-                Please contact the COE/administrator.
+            <p>
+                You currently do not have any active course assignments.
+                Please contact the COE or administrator.
             </p>
 
         </div>
@@ -252,10 +404,10 @@ foreach ($assignedCourses as $course) {
 
 
         <!-- =================================================
-             ASSIGNED COURSE CARDS
+             COURSE GRID
         ================================================== -->
 
-        <div class="row g-4">
+        <div class="teaching-course-grid">
 
             <?php foreach ($assignedCourses as $course): ?>
 
@@ -281,292 +433,397 @@ foreach ($assignedCourses as $course) {
 
                 }
 
-                $totalQuestions = 0;
-                $draftQuestions = 0;
-                $submittedQuestions = 0;
-                $reviewQuestions = 0;
-                $approvedQuestions = 0;
+                /*
+                |--------------------------------------------------------------------------
+                | Course question statistics
+                |--------------------------------------------------------------------------
+                */
+
+                $courseQuestions = 0;
+                $courseDraft = 0;
+                $courseSubmitted = 0;
+                $courseReview = 0;
+                $courseApproved = 0;
 
                 foreach ($matchingBanks as $bank) {
 
-                    $totalQuestions +=
+                    $courseQuestions +=
                         (int) $bank['actual_question_count'];
 
-                    $draftQuestions +=
+                    $courseDraft +=
                         (int) $bank['draft_count'];
 
-                    $submittedQuestions +=
+                    $courseSubmitted +=
                         (int) $bank['submitted_count'];
 
-                    $reviewQuestions +=
+                    $courseReview +=
                         (int) $bank['review_count'];
 
-                    $approvedQuestions +=
+                    $courseApproved +=
                         (int) $bank['approved_count'];
                 }
 
                 ?>
 
-                <div class="col-12 col-xl-6">
+                <!-- =================================================
+                     COURSE CARD
+                ================================================== -->
 
-                    <div class="card h-100 shadow-sm">
-
-                        <div class="card-body">
-
-                            <!-- =================================
-                                 COURSE HEADER
-                            ================================== -->
-
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-
-                                <div>
-
-                                    <span class="badge text-bg-primary mb-2">
-                                        <?= e(
-                                            $course['academic_year']
-                                        ) ?>
-                                    </span>
-
-                                    <h4 class="card-title mb-1">
-
-                                        <?= e(
-                                            $course['course_code']
-                                        ) ?>
-
-                                    </h4>
-
-                                    <div class="fw-semibold">
-
-                                        <?= e(
-                                            $course['course_name']
-                                        ) ?>
-
-                                    </div>
-
-                                </div>
+                <article class="teaching-course-card">
 
 
-                                <?php if (
-                                    (int) $course['can_submit'] === 1
-                                ): ?>
+                    <!-- =============================================
+                         COURSE HEADER
+                    ============================================== -->
 
-                                    <span class="badge text-bg-success">
-                                        Submission Enabled
-                                    </span>
+                    <div class="teaching-course-header">
 
-                                <?php else: ?>
+                        <div class="teaching-course-heading">
 
-                                    <span class="badge text-bg-secondary">
-                                        Submission Disabled
-                                    </span>
+                            <span class="teaching-course-code">
+                                <?= e($course['course_code']) ?>
+                            </span>
 
-                                <?php endif; ?>
+                            <h3 class="teaching-course-name">
+                                <?= e($course['course_name']) ?>
+                            </h3>
 
+                            <p class="teaching-course-bank-title">
+                                <?= e($course['program_name']) ?>
+                            </p>
+
+                        </div>
+
+
+                        <?php if (
+                            (int) $course['can_submit'] === 1
+                        ): ?>
+
+                            <span class="teaching-submission-status">
+                                Submission Enabled
+                            </span>
+
+                        <?php else: ?>
+
+                            <span
+                                class="teaching-submission-status"
+                                style="
+                                    background:#f1f5f9;
+                                    color:#64748b;
+                                "
+                            >
+                                Submission Disabled
+                            </span>
+
+                        <?php endif; ?>
+
+                    </div>
+
+
+                    <!-- =============================================
+                         COURSE INFORMATION
+                    ============================================== -->
+
+                    <div class="teaching-course-details">
+
+                        <!-- Program -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Program
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= e($course['program_code']) ?>
+                            </span>
+
+                        </div>
+
+
+                        <!-- Year -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Year
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= e($course['study_year']) ?>
+                            </span>
+
+                        </div>
+
+
+                        <!-- Semester -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Semester
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= e($course['semester']) ?>
+                            </span>
+
+                        </div>
+
+
+                        <!-- Academic Year -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Academic Year
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= e($course['academic_year']) ?>
+                            </span>
+
+                        </div>
+
+
+                        <!-- Questions -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Questions
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= $courseQuestions ?>
+                            </span>
+
+                        </div>
+
+
+                        <!-- Approved -->
+
+                        <div class="teaching-course-detail">
+
+                            <span class="teaching-course-detail-label">
+                                Approved
+                            </span>
+
+                            <span class="teaching-course-detail-value">
+                                <?= $courseApproved ?>
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================================
+                         QUESTION STATUS
+                    ============================================== -->
+
+                    <div
+                        class="teaching-course-status-grid"
+                        style="
+                            display:grid;
+                            grid-template-columns:repeat(4,minmax(0,1fr));
+                            gap:8px;
+                            padding:18px 24px 0;
+                        "
+                    >
+
+                        <div
+                            style="
+                                padding:10px;
+                                text-align:center;
+                                background:#f8fafc;
+                                border-radius:9px;
+                            "
+                        >
+
+                            <div
+                                style="
+                                    font-size:17px;
+                                    font-weight:750;
+                                    color:#111827;
+                                "
+                            >
+                                <?= $courseDraft ?>
                             </div>
 
-
-                            <!-- =================================
-                                 COURSE INFORMATION
-                            ================================== -->
-
-                            <div class="row g-2 mb-4">
-
-                                <div class="col-6 col-md-3">
-
-                                    <div class="border rounded p-2">
-
-                                        <div class="small text-muted">
-                                            Program
-                                        </div>
-
-                                        <div class="fw-semibold">
-                                            <?= e(
-                                                $course['program_code']
-                                            ) ?>
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="col-6 col-md-3">
-
-                                    <div class="border rounded p-2">
-
-                                        <div class="small text-muted">
-                                            Year
-                                        </div>
-
-                                        <div class="fw-semibold">
-                                            <?= e(
-                                                $course['study_year']
-                                            ) ?>
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="col-6 col-md-3">
-
-                                    <div class="border rounded p-2">
-
-                                        <div class="small text-muted">
-                                            Semester
-                                        </div>
-
-                                        <div class="fw-semibold">
-                                            <?= e(
-                                                $course['semester']
-                                            ) ?>
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="col-6 col-md-3">
-
-                                    <div class="border rounded p-2">
-
-                                        <div class="small text-muted">
-                                            Questions
-                                        </div>
-
-                                        <div class="fw-semibold">
-                                            <?= $totalQuestions ?>
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
+                            <div
+                                style="
+                                    margin-top:2px;
+                                    font-size:10px;
+                                    color:#94a3b8;
+                                "
+                            >
+                                Draft
                             </div>
 
-
-                            <!-- =================================
-                                 QUESTION STATUS
-                            ================================== -->
-
-                            <div class="row text-center g-2 mb-4">
-
-                                <div class="col">
-
-                                    <div class="bg-light rounded p-2">
-
-                                        <div class="fw-bold">
-                                            <?= $draftQuestions ?>
-                                        </div>
-
-                                        <div class="small text-muted">
-                                            Draft
-                                        </div>
-
-                                    </div>
-
-                                </div>
+                        </div>
 
 
-                                <div class="col">
+                        <div
+                            style="
+                                padding:10px;
+                                text-align:center;
+                                background:#f8fafc;
+                                border-radius:9px;
+                            "
+                        >
 
-                                    <div class="bg-light rounded p-2">
-
-                                        <div class="fw-bold">
-                                            <?= $submittedQuestions ?>
-                                        </div>
-
-                                        <div class="small text-muted">
-                                            Submitted
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="col">
-
-                                    <div class="bg-light rounded p-2">
-
-                                        <div class="fw-bold">
-                                            <?= $reviewQuestions ?>
-                                        </div>
-
-                                        <div class="small text-muted">
-                                            Review
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="col">
-
-                                    <div class="bg-light rounded p-2">
-
-                                        <div class="fw-bold">
-                                            <?= $approvedQuestions ?>
-                                        </div>
-
-                                        <div class="small text-muted">
-                                            Approved
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
+                            <div
+                                style="
+                                    font-size:17px;
+                                    font-weight:750;
+                                    color:#111827;
+                                "
+                            >
+                                <?= $courseSubmitted ?>
                             </div>
 
+                            <div
+                                style="
+                                    margin-top:2px;
+                                    font-size:10px;
+                                    color:#94a3b8;
+                                "
+                            >
+                                Submitted
+                            </div>
 
-                            <!-- =================================
-                                 ACTION BUTTONS
-                            ================================== -->
-
-                            <div class="d-flex flex-wrap gap-2">
-
-                                <?php if (
-                                    (int) $course['can_submit'] === 1
-                                ): ?>
-
-                                    <a
-                                        href="<?= BASE_URL ?>/teaching/question-bank.php?course_id=<?= $courseId ?>&academic_year_id=<?= $academicYearId ?>"
-                                        class="btn btn-primary"
-                                    >
-                                        Open Question Bank
-                                    </a>
+                        </div>
 
 
-                                    <a
-                                        href="<?= BASE_URL ?>/teaching/question-add.php?course_id=<?= $courseId ?>&academic_year_id=<?= $academicYearId ?>"
-                                        class="btn btn-outline-primary"
-                                    >
-                                        Add Question
-                                    </a>
+                        <div
+                            style="
+                                padding:10px;
+                                text-align:center;
+                                background:#f8fafc;
+                                border-radius:9px;
+                            "
+                        >
 
-                                <?php else: ?>
+                            <div
+                                style="
+                                    font-size:17px;
+                                    font-weight:750;
+                                    color:#111827;
+                                "
+                            >
+                                <?= $courseReview ?>
+                            </div>
 
-                                    <button
-                                        type="button"
-                                        class="btn btn-secondary"
-                                        disabled
-                                    >
-                                        Submission Disabled
-                                    </button>
+                            <div
+                                style="
+                                    margin-top:2px;
+                                    font-size:10px;
+                                    color:#94a3b8;
+                                "
+                            >
+                                Review
+                            </div>
 
-                                <?php endif; ?>
+                        </div>
 
+
+                        <div
+                            style="
+                                padding:10px;
+                                text-align:center;
+                                background:#f0fdf4;
+                                border-radius:9px;
+                            "
+                        >
+
+                            <div
+                                style="
+                                    font-size:17px;
+                                    font-weight:750;
+                                    color:#16a34a;
+                                "
+                            >
+                                <?= $courseApproved ?>
+                            </div>
+
+                            <div
+                                style="
+                                    margin-top:2px;
+                                    font-size:10px;
+                                    color:#64748b;
+                                "
+                            >
+                                Approved
                             </div>
 
                         </div>
 
                     </div>
 
-                </div>
+
+                    <!-- =============================================
+                         COURSE FOOTER
+                    ============================================== -->
+
+                    <div class="teaching-course-footer">
+
+                        <div class="teaching-question-count">
+
+                            <div class="teaching-question-count-icon">
+                                ?
+                            </div>
+
+                            <div class="teaching-question-count-text">
+
+                                <span class="teaching-question-count-label">
+                                    Total Questions
+                                </span>
+
+                                <span class="teaching-question-count-value">
+                                    <?= $courseQuestions ?>
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <?php if (
+                                (int) $course['can_submit'] === 1
+                            ): ?>
+
+                                <a
+                                    href="<?= BASE_URL ?>/teaching/question-bank.php?course_id=<?= $courseId ?>&academic_year_id=<?= $academicYearId ?>"
+                                    class="teaching-course-action"
+                                >
+                                    Open Question Bank
+                                    <span>→</span>
+                                </a>
+
+                            <?php else: ?>
+
+                                <button
+                                    type="button"
+                                    class="teaching-course-action"
+                                    disabled
+                                    style="
+                                        background:#94a3b8;
+                                        cursor:not-allowed;
+                                    "
+                                >
+                                    Submission Disabled
+                                </button>
+
+                            <?php endif; ?>
+
+                        </div>
+
+                    </div>
+
+                </article>
 
             <?php endforeach; ?>
 

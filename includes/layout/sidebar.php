@@ -1,8 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 $isTeaching = ($userRole === 'TEACHING_STAFF');
 $isCoe = ($userRole === 'COE_STAFF');
+
 ?>
 
 <div
@@ -32,10 +34,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </div>
 
 
+                <!-- Dashboard -->
+
                 <a
                     href="<?= BASE_URL ?>/teaching/dashboard.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'dashboard' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'dashboard' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -49,10 +52,29 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- My Courses -->
+
+                <a
+                    href="<?= BASE_URL ?>/teaching/courses.php"
+                    class="qps-sidebar-link <?= $activeMenu === 'courses' ? 'active' : '' ?>"
+                >
+
+                    <span class="qps-sidebar-icon">
+                        ◫
+                    </span>
+
+                    <span>
+                        My Courses
+                    </span>
+
+                </a>
+
+
+                <!-- Question Bank -->
+
                 <a
                     href="<?= BASE_URL ?>/teaching/question-bank.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'question-bank' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'question-bank' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -66,10 +88,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Add Question -->
+
                 <a
                     href="<?= BASE_URL ?>/teaching/question-add.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'add-question' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'add-question' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -83,10 +106,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Submissions -->
+
                 <a
                     href="<?= BASE_URL ?>/teaching/submissions.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'submissions' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'submissions' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -100,10 +124,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- History -->
+
                 <a
                     href="<?= BASE_URL ?>/teaching/history.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'history' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'history' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -134,10 +159,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </div>
 
 
+                <!-- Dashboard -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/dashboard.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'dashboard' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'dashboard' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -151,10 +177,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Question Bank -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/question-bank.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'question-bank' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'question-bank' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -168,10 +195,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Review -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/review.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'review' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'review' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -185,10 +213,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Blueprints -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/blueprints.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'blueprints' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'blueprints' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -202,10 +231,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Generate -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/generate.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'generate' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'generate' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -219,10 +249,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- Generated Papers -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/generated-papers.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'generated-papers' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'generated-papers' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -236,10 +267,11 @@ $isCoe = ($userRole === 'COE_STAFF');
                 </a>
 
 
+                <!-- History -->
+
                 <a
                     href="<?= BASE_URL ?>/coe/history.php"
-                    class="qps-sidebar-link
-                    <?= $activeMenu === 'history' ? 'active' : '' ?>"
+                    class="qps-sidebar-link <?= $activeMenu === 'history' ? 'active' : '' ?>"
                 >
 
                     <span class="qps-sidebar-icon">
@@ -267,6 +299,8 @@ $isCoe = ($userRole === 'COE_STAFF');
                 Account
             </div>
 
+
+            <!-- Logout -->
 
             <a
                 href="<?= BASE_URL ?>/logout.php"

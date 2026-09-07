@@ -1,357 +1,703 @@
 /* =========================================================
    TEACHING STAFF DASHBOARD
-   ========================================================= */
+========================================================= */
 
-/* ---------------------------------------------------------
-   Dashboard page wrapper
---------------------------------------------------------- */
+:root {
+    --td-primary: #2563eb;
+    --td-primary-dark: #1d4ed8;
+    --td-primary-light: #eff6ff;
 
-.qps-main .container-fluid {
+    --td-bg: #f6f8fc;
+    --td-card: #ffffff;
+    --td-border: #e5e7eb;
+
+    --td-text: #111827;
+    --td-text-soft: #64748b;
+    --td-text-muted: #94a3b8;
+
+    --td-success: #16a34a;
+    --td-success-bg: #f0fdf4;
+
+    --td-warning: #d97706;
+    --td-warning-bg: #fffbeb;
+
+    --td-radius: 14px;
+    --td-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+.qps-main {
+    background: var(--td-bg);
+}
+
+.qps-content {
     max-width: 1500px;
+    margin: 0 auto;
 }
 
 
-/* ---------------------------------------------------------
-   Dashboard heading
---------------------------------------------------------- */
+/* =========================================================
+   DASHBOARD HEADER
+========================================================= */
 
-.qps-main h1.h3 {
+.teaching-dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+
+    margin-bottom: 28px;
+}
+
+.teaching-dashboard-heading {
+    min-width: 0;
+}
+
+.teaching-dashboard-heading h1 {
     margin: 0;
-    font-size: 1.65rem;
+
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 750;
+
+    color: var(--td-text);
+    letter-spacing: -0.6px;
+}
+
+.teaching-dashboard-heading p {
+    margin: 8px 0 0;
+
+    font-size: 14px;
+    line-height: 1.6;
+
+    color: var(--td-text-soft);
+}
+
+
+/* =========================================================
+   WELCOME BADGE
+========================================================= */
+
+.teaching-welcome {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+    margin-bottom: 12px;
+
+    border-radius: 999px;
+
+    background: var(--td-primary-light);
+    color: var(--td-primary);
+
+    font-size: 12px;
     font-weight: 700;
-    line-height: 1.3;
-    color: #111827;
 }
 
-.qps-main .text-muted {
-    color: #6b7280 !important;
-}
+.teaching-welcome::before {
+    content: "";
 
+    width: 7px;
+    height: 7px;
 
-/* ---------------------------------------------------------
-   Course grid
---------------------------------------------------------- */
+    border-radius: 50%;
 
-.qps-main .row.g-4 {
-    --bs-gutter-x: 1.25rem;
-    --bs-gutter-y: 1.25rem;
+    background: var(--td-primary);
 }
 
 
-/* ---------------------------------------------------------
-   Course card
---------------------------------------------------------- */
+/* =========================================================
+   STATISTICS
+========================================================= */
 
-.qps-main .card {
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    background: #ffffff;
-    overflow: hidden;
+.teaching-stats {
+    display: grid;
+
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    gap: 16px;
+
+    margin-bottom: 28px;
+}
+
+.teaching-stat-card {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    min-height: 92px;
+
+    padding: 18px 20px;
+
+    background: var(--td-card);
+
+    border: 1px solid var(--td-border);
+    border-radius: var(--td-radius);
+
+    box-shadow: var(--td-shadow);
 
     transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        border-color 0.2s ease;
+        transform .2s ease,
+        box-shadow .2s ease,
+        border-color .2s ease;
 }
 
-.qps-main .card:hover {
+.teaching-stat-card:hover {
     transform: translateY(-2px);
-    border-color: #dbe3f0;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+
+    box-shadow:
+        0 8px 26px rgba(15, 23, 42, 0.08);
+
+    border-color: #dbe3ef;
 }
 
-.qps-main .card-body {
-    padding: 24px;
-}
 
+.teaching-stat-icon {
+    width: 46px;
+    height: 46px;
 
-/* ---------------------------------------------------------
-   Academic year badge
---------------------------------------------------------- */
+    flex: 0 0 46px;
 
-.qps-main .badge.text-bg-primary {
-    padding: 6px 10px;
-    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    font-size: 0.72rem;
+    border-radius: 12px;
+
+    background: var(--td-primary-light);
+    color: var(--td-primary);
+
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.02em;
 }
 
 
-/* ---------------------------------------------------------
-   Course title
---------------------------------------------------------- */
+.teaching-stat-content {
+    min-width: 0;
+}
 
-.qps-main .card-title {
-    color: #111827;
-    font-size: 1.25rem;
+.teaching-stat-label {
+    display: block;
+
+    margin-bottom: 3px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    color: var(--td-text-muted);
+}
+
+.teaching-stat-value {
+    display: block;
+
+    font-size: 23px;
+    line-height: 1.2;
     font-weight: 750;
-    letter-spacing: -0.01em;
-}
 
-.qps-main .card-body > .d-flex .fw-semibold {
-    color: #374151;
-    font-size: 0.94rem;
+    color: var(--td-text);
 }
 
 
-/* ---------------------------------------------------------
-   Submission status
---------------------------------------------------------- */
+/* =========================================================
+   SECTION HEADER
+========================================================= */
 
-.qps-main .badge.text-bg-success,
-.qps-main .badge.text-bg-secondary {
-    padding: 7px 10px;
+.teaching-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 14px;
+}
+
+.teaching-section-title {
+    margin: 0;
+
+    font-size: 17px;
+    font-weight: 750;
+
+    color: var(--td-text);
+}
+
+.teaching-section-subtitle {
+    margin: 4px 0 0;
+
+    font-size: 13px;
+
+    color: var(--td-text-soft);
+}
+
+
+/* =========================================================
+   COURSE GRID
+========================================================= */
+
+.teaching-course-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 20px;
+}
+
+
+/* =========================================================
+   COURSE CARD
+========================================================= */
+
+.teaching-course-card {
+    position: relative;
+
+    overflow: hidden;
+
+    background: var(--td-card);
+
+    border: 1px solid var(--td-border);
+    border-radius: 16px;
+
+    box-shadow: var(--td-shadow);
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.teaching-course-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+
+/* top blue line */
+
+.teaching-course-card::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 4px;
+
+    background: var(--td-primary);
+}
+
+
+/* =========================================================
+   COURSE CARD HEADER
+========================================================= */
+
+.teaching-course-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 24px 24px 18px;
+}
+
+.teaching-course-heading {
+    min-width: 0;
+}
+
+.teaching-course-code {
+    display: inline-flex;
+
+    padding: 5px 9px;
+
+    margin-bottom: 10px;
+
     border-radius: 7px;
 
-    font-size: 0.7rem;
+    background: var(--td-primary-light);
+    color: var(--td-primary);
+
+    font-size: 11px;
+    font-weight: 750;
+
+    letter-spacing: .3px;
+}
+
+.teaching-course-name {
+    margin: 0;
+
+    font-size: 20px;
+    line-height: 1.35;
+
+    font-weight: 750;
+
+    color: var(--td-text);
+}
+
+.teaching-course-bank-title {
+    margin: 6px 0 0;
+
+    font-size: 13px;
+
+    color: var(--td-text-soft);
+}
+
+
+/* =========================================================
+   SUBMISSION STATUS
+========================================================= */
+
+.teaching-submission-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    flex: 0 0 auto;
+
+    padding: 7px 10px;
+
+    border-radius: 999px;
+
+    background: var(--td-success-bg);
+    color: var(--td-success);
+
+    font-size: 11px;
     font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.teaching-submission-status::before {
+    content: "";
+
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+}
+
+
+/* =========================================================
+   COURSE DETAILS
+========================================================= */
+
+.teaching-course-details {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 1px;
+
+    margin: 0 24px;
+
+    overflow: hidden;
+
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+
+    background: var(--td-border);
+}
+
+.teaching-course-detail {
+    min-width: 0;
+
+    padding: 14px 15px;
+
+    background: #fbfcfe;
+}
+
+.teaching-course-detail-label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    color: var(--td-text-muted);
+}
+
+.teaching-course-detail-value {
+    display: block;
+
+    overflow: hidden;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    color: var(--td-text);
+
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 
-/* ---------------------------------------------------------
-   Course information boxes
---------------------------------------------------------- */
+/* =========================================================
+   COURSE FOOTER
+========================================================= */
 
-.qps-main .border.rounded.p-2 {
-    min-height: 68px;
+.teaching-course-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-    border-color: #e5e7eb !important;
-    border-radius: 9px !important;
+    gap: 16px;
 
-    background: #f8fafc;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease;
+    padding: 18px 24px 22px;
 }
 
-.qps-main .border.rounded.p-2:hover {
-    background: #f1f5f9;
-    border-color: #d8dee8 !important;
+.teaching-question-count {
+    display: flex;
+    align-items: center;
+    gap: 9px;
 }
 
-.qps-main .border.rounded.p-2 .small {
-    margin-bottom: 4px;
-    font-size: 0.7rem;
-    line-height: 1.2;
-}
-
-.qps-main .border.rounded.p-2 .fw-semibold {
-    color: #111827;
-    font-size: 0.85rem;
-    line-height: 1.25;
-}
-
-
-/* ---------------------------------------------------------
-   Question count
---------------------------------------------------------- */
-
-.qps-main .border.rounded.p-2 .fw-semibold {
-    font-weight: 700 !important;
-}
-
-
-/* ---------------------------------------------------------
-   Question status counters
---------------------------------------------------------- */
-
-.qps-main .row.text-center .bg-light {
-    min-height: 70px;
-
-    border: 1px solid #edf0f4;
-
-    background: #f8fafc !important;
-    border-radius: 9px !important;
+.teaching-question-count-icon {
+    width: 34px;
+    height: 34px;
 
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
 
+    border-radius: 9px;
+
+    background: #f1f5f9;
+
+    font-size: 15px;
+}
+
+.teaching-question-count-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.teaching-question-count-label {
+    font-size: 11px;
+
+    color: var(--td-text-muted);
+}
+
+.teaching-question-count-value {
+    margin-top: 2px;
+
+    font-size: 16px;
+    font-weight: 750;
+
+    color: var(--td-text);
+}
+
+
+/* =========================================================
+   COURSE ACTION BUTTON
+========================================================= */
+
+.teaching-course-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    min-height: 38px;
+
+    padding: 0 15px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background: var(--td-primary);
+    color: #fff;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    text-decoration: none;
+
+    cursor: pointer;
+
     transition:
-        background 0.2s ease,
-        border-color 0.2s ease;
+        background .2s ease,
+        transform .2s ease;
 }
 
-.qps-main .row.text-center .bg-light:hover {
-    background: #f1f5f9 !important;
-    border-color: #e1e6ee;
-}
+.teaching-course-action:hover {
+    background: var(--td-primary-dark);
 
-.qps-main .row.text-center .fw-bold {
-    color: #111827;
-    font-size: 1.15rem;
-    line-height: 1.2;
-}
-
-.qps-main .row.text-center .small {
-    margin-top: 4px;
-    font-size: 0.68rem;
-}
-
-
-/* ---------------------------------------------------------
-   Action buttons
---------------------------------------------------------- */
-
-.qps-main .btn {
-    min-height: 40px;
-
-    padding: 9px 15px;
-
-    border-radius: 8px;
-
-    font-size: 0.84rem;
-    font-weight: 600;
-
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        background-color 0.15s ease;
-}
-
-.qps-main .btn:hover:not(:disabled) {
     transform: translateY(-1px);
 }
 
-.qps-main .btn-primary {
-    box-shadow: 0 3px 10px rgba(13, 110, 253, 0.15);
-}
-
-.qps-main .btn-primary:hover {
-    box-shadow: 0 5px 14px rgba(13, 110, 253, 0.2);
-}
-
-.qps-main .btn-outline-primary:hover {
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12);
+.teaching-course-action:active {
+    transform: translateY(0);
 }
 
 
-/* ---------------------------------------------------------
-   No courses alert
---------------------------------------------------------- */
+/* =========================================================
+   EMPTY STATE
+========================================================= */
 
-.qps-main .alert {
-    border-radius: 12px;
-    border: 1px solid #dbeafe;
+.teaching-empty-state {
+    padding: 60px 30px;
 
-    padding: 20px 22px;
+    text-align: center;
 
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    background: var(--td-card);
+
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
 }
 
-.qps-main .alert-heading {
-    margin-bottom: 6px;
-    font-size: 1rem;
-    font-weight: 700;
+.teaching-empty-state-icon {
+    width: 52px;
+    height: 52px;
+
+    margin: 0 auto 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: var(--td-primary-light);
+    color: var(--td-primary);
+
+    font-size: 22px;
 }
 
+.teaching-empty-state h3 {
+    margin: 0;
 
-/* ---------------------------------------------------------
-   Dashboard spacing
---------------------------------------------------------- */
+    font-size: 16px;
 
-.qps-main .container-fluid.py-4 {
-    padding-top: 30px !important;
-    padding-bottom: 40px !important;
+    color: var(--td-text);
 }
 
+.teaching-empty-state p {
+    margin: 7px 0 0;
 
-/* ---------------------------------------------------------
-   Desktop
---------------------------------------------------------- */
+    font-size: 13px;
 
-@media (min-width: 1200px) {
-
-    .qps-main .container-fluid.py-4 {
-        padding-left: 30px !important;
-        padding-right: 30px !important;
-    }
-
-}
-
-
-/* ---------------------------------------------------------
-   Tablet
---------------------------------------------------------- */
-
-@media (max-width: 991.98px) {
-
-    .qps-main .container-fluid.py-4 {
-        padding-top: 24px !important;
-        padding-left: 20px !important;
-        padding-right: 20px !important;
-    }
-
-    .qps-main h1.h3 {
-        font-size: 1.45rem;
-    }
-
+    color: var(--td-text-soft);
 }
 
 
-/* ---------------------------------------------------------
-   Mobile
---------------------------------------------------------- */
+/* =========================================================
+   RESPONSIVE
+========================================================= */
 
-@media (max-width: 575.98px) {
+@media (max-width: 1100px) {
 
-    .qps-main .container-fluid.py-4 {
-        padding-top: 20px !important;
-        padding-left: 15px !important;
-        padding-right: 15px !important;
+    .teaching-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .qps-main h1.h3 {
-        font-size: 1.3rem;
+    .teaching-course-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 760px) {
+
+    .teaching-dashboard-header {
+        flex-direction: column;
     }
 
-    .qps-main .card-body {
-        padding: 18px;
+    .teaching-dashboard-heading h1 {
+        font-size: 25px;
     }
 
-    .qps-main .card-body > .d-flex {
-        gap: 12px;
+    .teaching-stats {
+        grid-template-columns: 1fr;
     }
 
-    .qps-main .card-body > .d-flex .badge {
-        font-size: 0.64rem;
+    .teaching-course-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .qps-main .card-title {
-        font-size: 1.1rem;
+    .teaching-course-header {
+        flex-direction: column;
     }
 
-    .qps-main .row.text-center .bg-light {
-        min-height: 64px;
+    .teaching-submission-status {
+        align-self: flex-start;
+    }
+}
+
+
+@media (max-width: 480px) {
+
+    .teaching-course-details {
+        grid-template-columns: 1fr;
     }
 
-    .qps-main .btn {
+    .teaching-course-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .teaching-course-action {
         width: 100%;
     }
-
 }
 
 
-/* ---------------------------------------------------------
-   Accessibility
---------------------------------------------------------- */
 
-@media (prefers-reduced-motion: reduce) {
 
-    .qps-main .card,
-    .qps-main .btn,
-    .qps-main .border.rounded.p-2,
-    .qps-main .row.text-center .bg-light {
-        transition: none;
+
+
+/* =========================================================
+   COURSE STATUS GRID
+========================================================= */
+
+.teaching-course-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 18px 24px 0;
+}
+
+.teaching-status-item {
+    padding: 10px;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 9px;
+}
+
+.teaching-status-value {
+    font-size: 17px;
+    font-weight: 750;
+    color: var(--td-text);
+}
+
+.teaching-status-label {
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--td-text-muted);
+}
+
+.teaching-status-item.is-approved {
+    background: var(--td-success-bg);
+}
+
+.teaching-status-item.is-approved .teaching-status-value {
+    color: var(--td-success);
+}
+
+@media (max-width: 600px) {
+
+    .teaching-course-status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
-    .qps-main .card:hover,
-    .qps-main .btn:hover:not(:disabled) {
-        transform: none;
-    }
-
 }

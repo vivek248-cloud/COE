@@ -12,7 +12,7 @@ const SESSION_TIMEOUT = 1800; // 30 minutes
 
 const DB_HOST = '127.0.0.1';
 const DB_PORT = '3306';
-const DB_NAME = 'question_paper_system-new';
+const DB_NAME = 'question_paper_system_new';
 const DB_USER = 'root';
 const DB_PASS = '';
 
