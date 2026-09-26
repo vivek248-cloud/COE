@@ -1,0 +1,315 @@
+{
+  "institution": "Holy Cross College (Autonomous), Tiruchirappalli",
+  "department": "ECONOMICS",
+  "paper_code": "U21EC1ALT02",
+  "course_title": "(Allied - 2) BUSINESS ECONOMICS",
+  "degree_level": "UG",
+  "semester": "Semester 1",
+  "academic_year": "2026-2027",
+  "exam_type": "Odd Semester End Examination",
+  "regulation": "2024 (OBE)",
+  "total_questions": 30,
+  "blueprint_type": "Holy Cross Institutional OBE Blueprint Matrix",
+  "questions": [
+    {
+      "q_number": 1,
+      "unit_no": 1,
+      "subunit_no": "1.1",
+      "marks": 1,
+      "k_level": "K1(R)",
+      "co_level": "CO1",
+      "section_type": "MC",
+      "question_text": "Business Economics is essentially an application of economic theory to business management. Who defined economics as a study of mankind in the ordinary business of life?\n(A) Lionel Robbins\n(B) Alfred Marshall\n(C) Adam Smith\n(D) J.M. Keynes"
+    },
+    {
+      "q_number": 2,
+      "unit_no": 1,
+      "subunit_no": "1.2",
+      "marks": 2,
+      "k_level": "K2(U)",
+      "co_level": "CO1",
+      "section_type": "V.S.A",
+      "question_text": "Define the concept of 'Opportunity Cost' and state its significance in modern managerial decision-making."
+    },
+    {
+      "q_number": 3,
+      "unit_no": 1,
+      "subunit_no": "1.1",
+      "marks": 5,
+      "k_level": "K3(AP)",
+      "co_level": "CO1",
+      "section_type": "PART B",
+      "question_text": "Explain the scope and nature of Business Economics. How does it bridge the gap between abstract economic theory and real-world managerial practice?"
+    },
+    {
+      "q_number": 4,
+      "unit_no": 1,
+      "subunit_no": "1.2",
+      "marks": 5,
+      "k_level": "K4(AN)",
+      "co_level": "CO1",
+      "section_type": "PART B",
+      "question_text": "Critically differentiate between Microeconomics and Macroeconomics from the perspective of an executive formulating firm strategy."
+    },
+    {
+      "q_number": 5,
+      "unit_no": 1,
+      "subunit_no": "1.2",
+      "marks": 10,
+      "k_level": "K5(EV)",
+      "co_level": "CO1",
+      "section_type": "PART C",
+      "question_text": "Evaluate the role and responsibilities of a Business Economist in a modern competitive corporate enterprise facing market uncertainties."
+    },
+    {
+      "q_number": 6,
+      "unit_no": 1,
+      "subunit_no": "1.3",
+      "marks": 10,
+      "k_level": "K4(AN)",
+      "co_level": "CO1",
+      "section_type": "PART C",
+      "question_text": "Analyze the fundamental economic principles that govern managerial choices: Incremental Principle, Time Perspective, and Equi-Marginal Principle."
+    },
+    {
+      "q_number": 7,
+      "unit_no": 2,
+      "subunit_no": "2.1",
+      "marks": 1,
+      "k_level": "K1(R)",
+      "co_level": "CO2",
+      "section_type": "MC",
+      "question_text": "When cross elasticity of demand between two goods is positive, the goods are classified as:\n(A) Complements\n(B) Substitutes\n(C) Inferior goods\n(D) Giffen goods"
+    },
+    {
+      "q_number": 8,
+      "unit_no": 2,
+      "subunit_no": "2.2",
+      "marks": 2,
+      "k_level": "K2(U)",
+      "co_level": "CO2",
+      "section_type": "V.S.A",
+      "question_text": "State the Law of Demand and mention any two important exceptions to the law."
+    },
+    {
+      "q_number": 9,
+      "unit_no": 2,
+      "subunit_no": "2.1",
+      "marks": 5,
+      "k_level": "K3(AP)",
+      "co_level": "CO2",
+      "section_type": "PART B",
+      "question_text": "Demonstrate with appropriate graphical illustration how price elasticity of demand is measured using the Point Elasticity method."
+    },
+    {
+      "q_number": 10,
+      "unit_no": 2,
+      "subunit_no": "2.3",
+      "marks": 5,
+      "k_level": "K4(AN)",
+      "co_level": "CO2",
+      "section_type": "PART B",
+      "question_text": "Analyze the qualitative and quantitative methods employed in Demand Forecasting for newly launched consumer durable products."
+    },
+    {
+      "q_number": 11,
+      "unit_no": 2,
+      "subunit_no": "2.2",
+      "marks": 10,
+      "k_level": "K5(EV)",
+      "co_level": "CO2",
+      "section_type": "PART C",
+      "question_text": "Critically assess the various degrees of Price Elasticity of Demand (Elastic, Inelastic, Unitary, Perfectly Elastic, Perfectly Inelastic) and their managerial pricing implications."
+    },
+    {
+      "q_number": 12,
+      "unit_no": 2,
+      "subunit_no": "2.3",
+      "marks": 10,
+      "k_level": "K4(AN)",
+      "co_level": "CO2",
+      "section_type": "PART C",
+      "question_text": "Examine the properties of Indifference Curves and explain consumer equilibrium with budget constraints."
+    },
+    {
+      "q_number": 13,
+      "unit_no": 3,
+      "subunit_no": "3.1",
+      "marks": 1,
+      "k_level": "K1(R) (MATCH)",
+      "co_level": "CO3",
+      "section_type": "MC",
+      "question_text": "Match the following production concepts:\n1. Short-run Production -> (a) Returns to Scale\n2. Long-run Production -> (b) Law of Variable Proportions\n3. Isoquant Slope -> (c) Marginal Rate of Technical Substitution\nChoose the correct code:\n(A) 1-(b), 2-(a), 3-(c)\n(B) 1-(a), 2-(b), 3-(c)\n(C) 1-(c), 2-(b), 3-(a)\n(D) 1-(b), 2-(c), 3-(a)"
+    },
+    {
+      "q_number": 14,
+      "unit_no": 3,
+      "subunit_no": "3.2",
+      "marks": 2,
+      "k_level": "K2(U)",
+      "co_level": "CO3",
+      "section_type": "V.S.A",
+      "question_text": "What are Isoquants? State their essential economic characteristics."
+    },
+    {
+      "q_number": 15,
+      "unit_no": 3,
+      "subunit_no": "3.1",
+      "marks": 5,
+      "k_level": "K3(AP)",
+      "co_level": "CO3",
+      "section_type": "PART B",
+      "question_text": "Explain the Three Stages of the Law of Variable Proportions using a table and diagram. Identify the rational stage of production."
+    },
+    {
+      "q_number": 16,
+      "unit_no": 3,
+      "subunit_no": "3.3",
+      "marks": 5,
+      "k_level": "K4(AN)",
+      "co_level": "CO3",
+      "section_type": "PART B",
+      "question_text": "Differentiate between Internal Economies of Scale and External Economies of Scale with real industrial examples."
+    },
+    {
+      "q_number": 17,
+      "unit_no": 3,
+      "subunit_no": "3.2",
+      "marks": 10,
+      "k_level": "K5(EV)",
+      "co_level": "CO3",
+      "section_type": "PART C",
+      "question_text": "Discuss the Cobb-Douglas Production Function and explain how Returns to Scale (Increasing, Constant, Decreasing) are determined from its parameters."
+    },
+    {
+      "q_number": 18,
+      "unit_no": 3,
+      "subunit_no": "3.3",
+      "marks": 10,
+      "k_level": "K4(AN)",
+      "co_level": "CO3",
+      "section_type": "PART C",
+      "question_text": "Analyze the behavior of Short-Run Cost Curves (TFC, TVC, TC, AFC, AVC, AC, MC) and explain why the Long-Run Average Cost (LAC) curve is known as the Envelope Curve."
+    },
+    {
+      "q_number": 19,
+      "unit_no": 4,
+      "subunit_no": "4.1",
+      "marks": 1,
+      "k_level": "K2(U) (ASSERTION)",
+      "co_level": "CO4",
+      "section_type": "MC",
+      "question_text": "Assertion (A): Under Perfect Competition, the firm is a price taker.\nReason (R): The industry consists of a large number of buyers and sellers selling homogenous products with free entry and exit.\n(A) Both (A) and (R) are true and (R) is the correct explanation of (A)\n(B) Both (A) and (R) are true but (R) is not the correct explanation of (A)\n(C) (A) is true but (R) is false\n(D) (A) is false but (R) is true"
+    },
+    {
+      "q_number": 20,
+      "unit_no": 4,
+      "subunit_no": "4.2",
+      "marks": 2,
+      "k_level": "K2(U)",
+      "co_level": "CO4",
+      "section_type": "V.S.A",
+      "question_text": "Define 'Monopolistic Competition' and give two examples of industries operating under this market structure."
+    },
+    {
+      "q_number": 21,
+      "unit_no": 4,
+      "subunit_no": "4.1",
+      "marks": 5,
+      "k_level": "K3(AP)",
+      "co_level": "CO4",
+      "section_type": "PART B",
+      "question_text": "Show how price and output are determined under Perfect Competition in the short-run equilibrium of a firm."
+    },
+    {
+      "q_number": 22,
+      "unit_no": 4,
+      "subunit_no": "4.3",
+      "marks": 5,
+      "k_level": "K4(AN)",
+      "co_level": "CO4",
+      "section_type": "PART B",
+      "question_text": "Analyze the Kinked Demand Curve hypothesis of Paul Sweezy to explain price rigidity under Oligopoly."
+    },
+    {
+      "q_number": 23,
+      "unit_no": 4,
+      "subunit_no": "4.2",
+      "marks": 10,
+      "k_level": "K5(EV)",
+      "co_level": "CO4",
+      "section_type": "PART C",
+      "question_text": "Compare and contrast price determination and output decisions under Pure Monopoly and Monopolistic Competition."
+    },
+    {
+      "q_number": 24,
+      "unit_no": 4,
+      "subunit_no": "4.3",
+      "marks": 10,
+      "k_level": "K4(AN)",
+      "co_level": "CO4",
+      "section_type": "PART C",
+      "question_text": "Examine various Pricing Strategies adopted by modern business firms: Price Discrimination, Cost-Plus Pricing, Penetration Pricing, and Price Skimming."
+    },
+    {
+      "q_number": 25,
+      "unit_no": 5,
+      "subunit_no": "5.1",
+      "marks": 1,
+      "k_level": "K1(R)",
+      "co_level": "CO5",
+      "section_type": "MC",
+      "question_text": "The point at which total revenue equals total cost and the firm makes neither a profit nor a loss is called:\n(A) Shut-down Point\n(B) Break-Even Point\n(C) Equilibrium Point\n(D) Optimum Output Point"
+    },
+    {
+      "q_number": 26,
+      "unit_no": 5,
+      "subunit_no": "5.2",
+      "marks": 2,
+      "k_level": "K2(U)",
+      "co_level": "CO5",
+      "section_type": "V.S.A",
+      "question_text": "State the formula for calculating Break-Even Point (BEP) in units and in sales value."
+    },
+    {
+      "q_number": 27,
+      "unit_no": 5,
+      "subunit_no": "5.1",
+      "marks": 5,
+      "k_level": "K3(AP)",
+      "co_level": "CO5",
+      "section_type": "PART B",
+      "question_text": "A manufacturing firm has Fixed Costs of Rs. 2,00,000, Variable Cost per unit of Rs. 30, and Selling Price per unit of Rs. 50. Calculate:\n(i) Break-Even Point in units\n(ii) Margin of Safety if actual sales are 15,000 units."
+    },
+    {
+      "q_number": 28,
+      "unit_no": 5,
+      "subunit_no": "5.3",
+      "marks": 5,
+      "k_level": "K4(AN)",
+      "co_level": "CO5",
+      "section_type": "PART B",
+      "question_text": "Explain Capital Budgeting and analyze the Net Present Value (NPV) method of project evaluation."
+    },
+    {
+      "q_number": 29,
+      "unit_no": 5,
+      "subunit_no": "5.2",
+      "marks": 10,
+      "k_level": "K5(EV)",
+      "co_level": "CO5",
+      "section_type": "PART C",
+      "question_text": "Discuss the managerial utility and limitations of Break-Even Analysis. Illustrate how multi-product firms utilize Profit-Volume (P/V) ratio for profit planning."
+    },
+    {
+      "q_number": 30,
+      "unit_no": 5,
+      "subunit_no": "5.3",
+      "marks": 10,
+      "k_level": "K6(CR)",
+      "co_level": "CO5",
+      "section_type": "PART D",
+      "question_text": "[Compulsory Case Study / Applied Decision Analysis]\nAn emerging electric vehicle components company is evaluating two mutually exclusive expansion capital projects:\n- Project Alpha: Initial Investment = Rs. 50 Lakhs, Annual Cash Inflow = Rs. 15 Lakhs for 5 years.\n- Project Beta: Initial Investment = Rs. 60 Lakhs, Annual Cash Inflow = Rs. 18 Lakhs for 5 years.\nAssuming a discount rate of 10% (Discount factors: Year 1=0.909, Year 2=0.826, Year 3=0.751, Year 4=0.683, Year 5=0.621), formulate an investment recommendation using NPV and Payback Period methods."
+    }
+  ]
+}
