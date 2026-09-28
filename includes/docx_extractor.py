@@ -87,146 +87,223 @@ def numinfo(p):
     il=np.ilvl.val if np.ilvl is not None else 0
     return (str(nid),int(il)) if nid is not None else None
 
+def numbering_formats(path):
+    out={}
+    try:
+        with ZipFile(path) as z:
+            root=etree.fromstring(z.read('word/numbering.xml'))
+            absmap={a.get(f'{{{W}}}abstractNumId'):a for a in root.xpath('.//w:abstractNum',namespaces=NS)}
+            for n in root.xpath('.//w:num',namespaces=NS):
+                nid=n.get(f'{{{W}}}numId')
+                a=n.find('./w:abstractNumId',namespaces=NS)
+                if a is None: continue
+                ab=absmap.get(a.get(f'{{{W}}}val'))
+                if ab is None: continue
+                for lvl in ab.xpath('./w:lvl',namespaces=NS):
+                    il=lvl.get(f'{{{W}}}ilvl','0')
+                    nf=lvl.find('./w:numFmt',namespaces=NS)
+                    if nf is not None: out[(str(nid),int(il))]=nf.get(f'{{{W}}}val')
+    except Exception:
+        pass
+    return out
+
 def parse_docx(path,section_marks=None):
     marks={**DEFAULT_MARKS,**(section_marks or {})}
     doc=docx.Document(path)
     fmts=numbering_formats(path)
-    blocks=[]
-    for i,p in enumerate(doc.paragraphs):
-        t=clean(p.text)
-        if t:blocks.append({'i':i,'text':t,'num':numinfo(p)})
-    by=defaultdict(list)
-    for b in blocks:
-        if b['num']:by[b['num'][0]].append(b)
-    roles={}
-    for nid,items in by.items():
-        f=fmts.get(nid)
-        q=sum(1 for x in items if x['text'] and not match_row(x['text']) and not re.match(r'^[A-Ea-e]\s*[\.)-]',x['text']))
-        if f=='decimal' and q:roles[nid]='question'
-        elif f in ('lowerLetter','upperLetter') or any(match_row(x['text']) for x in items):roles[nid]='option'
-        else:roles[nid]='other'
 
-    qs=[];cur=None;sec='A';sub='1.1';k='K1';match=False;passage=False;opt_counts=defaultdict(int)
+    # Read paragraphs and tables in document order. Word numbering is retained
+    # because many real banks store question numbers as numbering properties
+    # instead of literal "1." text.
+    blocks=[]
+    for idx,b in enumerate(iter_blocks(doc)):
+        if hasattr(b,'text'):
+            num=None
+            try:
+                ppr=b._p.pPr
+                np=ppr.numPr if ppr is not None else None
+                if np is not None and np.numId is not None:
+                    num=(str(np.numId.val), int(np.ilvl.val) if np.ilvl is not None else 0)
+            except Exception:
+                pass
+            for part in b.text.splitlines():
+                t=clean(part)
+                if t: blocks.append((idx,t,'p',num))
+        else:
+            for t in table_lines(b):
+                blocks.append((idx,t,'t',None))
+
+    qs=[]
+    current=None
+    active={'code':'','sub_unit':'1.1','k_level':'K1','question_type':'VSA'}
+    sec='A'
+    in_match=False
+    in_ar=False
 
     def flush():
-        nonlocal cur,match,passage
-        if not cur:return
-        text=clean(cur.get('question_text',''))
-        if not text:
-            cur=None;match=False;passage=False;return
-        if cur.get('question_type')=='PASSAGE':
-            cur['question_text']=text
-        if cur.get('question_type')=='MCQ' and len(cur.get('options',{}))<2:
-            cur.setdefault('warnings',[]).append('MCQ options incomplete')
-        if cur.get('question_type')=='MATCH' and not cur.get('answer_key'):
-            cur.setdefault('warnings',[]).append('Match answer key not detected')
-        cur['q_number']=len(qs)+1
-        cur['unit_no']=int(cur.get('unit_no') or sub.split('.')[0])
-        cur['sub_unit']=cur.get('sub_unit') or sub
-        cur['section_type']=cur.get('section_type') or 'SECTION-'+sec
-        cur['k_level']=cur.get('k_level') or k
-        cur['co_level']=cur.get('co_level') or ('CO'+cur['k_level'].replace('K',''))
-        cur['marks']=int(cur.get('marks') or marks.get(sec,1))
-        cur.setdefault('options',{});cur.setdefault('answer_key','')
-        score=.55+.10*(bool(cur.get('source_q_number')))+.10*bool(cur.get('sub_unit'))+.08*bool(cur.get('k_level'))+.05*bool(cur.get('answer_key'))+.05*(cur.get('question_type') in ('MCQ','MATCH','ASSERTION_REASON','PASSAGE'))
-        cur['parser_confidence']=round(min(score,.99),2)
-        cur['parse_status']='warning' if cur.get('warnings') else 'ready'
-        qs.append(cur);cur=None;match=False;passage=False
+        nonlocal current,in_match,in_ar
+        if not current:
+            return
+        current['question_text']=clean(current.get('question_text',''))
+        if not current.get('question_text') and current.get('question_type')!='MATCH':
+            current=None; in_match=False; in_ar=False; return
 
-    def start(text,qtype='VSA',source=None):
-        nonlocal cur,match,passage
+        current['q_number']=len(qs)+1
+        current['unit_no']=int(str(current.get('sub_unit') or active['sub_unit']).split('.')[0])
+        current['sub_unit']=current.get('sub_unit') or active['sub_unit']
+        current['section_type']='SECTION-'+sec
+        current['k_level']=current.get('k_level') or active['k_level']
+        current['co_level']=current.get('co_level') or ('CO'+current['k_level'][1:])
+        current['marks']=int(current.get('marks') or marks.get(sec,1))
+        current.setdefault('options',{})
+        current.setdefault('answer_key','')
+        current.setdefault('warnings',[])
+        current['language']=lang(current.get('question_text',''))
+
+        qt=current.get('question_type')
+        if qt=='MCQ' and len(current.get('options',{}))<2:
+            current['warnings'].append('MCQ options incomplete')
+        if qt=='MCQ' and not current.get('answer_key'):
+            current['warnings'].append('MCQ answer key missing')
+        if qt=='MATCH' and not current.get('answer_key'):
+            current['warnings'].append('Match answer key not detected')
+        if qt=='ASSERTION_REASON':
+            if not current.get('assertion'): current['warnings'].append('Assertion not detected')
+            if not current.get('reason'): current['warnings'].append('Reason not detected')
+
+        score=.50 + .12*bool(current.get('source_q_number')) + .10*bool(current.get('sub_unit')) + .08*bool(current.get('k_level')) + .08*bool(current.get('question_type')) + .07*bool(current.get('answer_key'))
+        current['parser_confidence']=round(min(score,.99),2)
+        current['parse_status']='warning' if current['warnings'] else 'ready'
+        qs.append(current)
+        current=None; in_match=False; in_ar=False
+
+    def start(body,qtype=None,src=None):
+        nonlocal current,in_match,in_ar
         flush()
-        cur={'source_q_number':source,'question_text':strip_inline_key(text),'unit_no':int(sub.split('.')[0]),'sub_unit':sub,
-             'section_type':'SECTION-'+sec,'k_level':k,'co_level':'CO'+k.replace('K',''),
-             'marks':marks.get(sec,1),'question_type':qtype,'options':{},'answer_key':'',
-             'warnings':[],'passage_text':'','sub_questions':[]}
-        match=qtype=='MATCH';passage=qtype=='PASSAGE'
+        qt=qtype or active.get('question_type') or 'VSA'
+        body=clean(body)
 
-    for b in blocks:
-        line=b['text'];nid=b['num'][0] if b['num'] else None;fmt=fmts.get(nid) if nid else None
-        if noise(line):continue
+        # Inline options are common in the real Hindi bank.
+        opts=option_tokens(body)
+        if opts:
+            first=re.search(r'(?:^|\s)[A-Da-d]\s*[\.)\-:]\s*',body)
+            if first:
+                body=clean(body[:first.start()])
+        current={
+            'source_q_number':src,
+            'course_code':active.get('code',''),
+            'question_text':body,
+            'unit_no':int(str(active['sub_unit']).split('.')[0]),
+            'sub_unit':active['sub_unit'],
+            'section_type':'SECTION-'+sec,
+            'k_level':active['k_level'],
+            'co_level':'CO'+active['k_level'][1:],
+            'question_type':qt,
+            'marks':marks.get(sec,1),
+            'options':opts.copy(),
+            'answer_key':'',
+            'warnings':[],
+            'assertion':'',
+            'reason':'',
+            'passage_text':'',
+            'sub_questions':[],
+            'match_text':''
+        }
+        in_match=qt=='MATCH'
+        in_ar=qt=='ASSERTION_REASON'
+
+    def capture_inline_key(line):
+        m=re.search(r'\b(?:Key|Answer|Ans)\s*[:=]?\s*([A-Da-d])\s*$',line,re.I)
+        if not m: return line,''
+        return clean(line[:m.start()]),m.group(1).upper()
+
+    for _,line,kind,num in blocks:
+        if noise(line):
+            continue
 
         ss=section(line)
         if ss:
-            flush();sec=ss;k=klevel(line) or k;continue
+            flush(); sec=ss; continue
 
-        kk=klevel(line)
-        if re.match(r'^Assertion\s*&\s*Reasoning\s*-\s*K\s*[1-6]',line,re.I):
-            flush();k=kk or k;continue
-        if kk and (re.match(r'^K\s*[1-6]\b',line,re.I) or re.search(r'\b(?:SECTION|PART)\b',line,re.I)):
-            flush();k=kk;continue
+        md=metadata(line)
+        if md:
+            changed=any(md.get(k) and md.get(k)!=active.get(k) for k in ('sub_unit','k_level','question_type','code'))
+            if changed and current:
+                flush()
+            active.update(md)
+            continue
 
-        su=subunit(line)
-        if su:
-            flush();sub=su;k=klevel(line) or k;continue
-
+        # Standalone answer keys, including the real file's "Key a" form.
         ak=answer(line)
         if ak:
-            if cur:cur['answer_key']=ak
+            if current: current['answer_key']=ak
             continue
 
-        if re.match(r'^(?:Reliez|Match|Associez|பொருத்துக)\b',line,re.I):
-            start(line,'MATCH');continue
-        if re.match(r'^(?:L[’\']énoncé et la justification|Assertion\s*(?:and|&)\s*Reason)',line,re.I):
-            start(line,'ASSERTION_REASON');continue
-        if fmt=='decimal' and re.match(r'^(?:Lisez|Read)\b',line,re.I) and re.search(r'(?:question|questions|répondez)',line,re.I):
-            start(line,'PASSAGE');continue
+        line_no_key,key=capture_inline_key(line)
+        if key:
+            line=line_no_key
+            if current:
+                current['answer_key']=key
 
-        if match and re.match(r'^\s*\d+\s*[\.)-]\s*',line):
-            cur['question_text']=clean(cur['question_text']+'\n'+line);continue
-
-        qm=re.match(r'^\s*(?:Q(?:uestion)?\s*)?(\d+)\s*[\.)\-:]\s*(.+)$',line,re.I)
-        if qm and not passage:
-            body=qm.group(2);start(body,'MATCH' if re.match(r'^(?:Reliez|Match|Associez)',body,re.I) else 'VSA',qm.group(1));continue
-
-        if passage:
-            if nid and roles.get(nid)=='option' and not match_row(line):
-                cur['sub_questions'].append({'text':line,'answer_key':''})
-            else:cur['passage_text']=clean(cur.get('passage_text','')+' '+line)
+        u=unit(line); kk=klevel(line)
+        if u or kk:
+            if current and ((u and u!=active['sub_unit']) or (kk and kk!=active['k_level'])):
+                flush()
+            if u: active['sub_unit']=u
+            if kk: active['k_level']=kk
             continue
 
-        if nid and fmt=='decimal' and roles.get(nid)=='question' and not match and not (cur and cur.get('question_type')=='ASSERTION_REASON'):
-            start(line,'VSA',None);continue
-
-        if cur:
-            if cur.get('question_type')=='ASSERTION_REASON':
-                if re.match(r'^(?:L[’\']énoncé|assertion)\s*[:：]',line,re.I):cur['assertion']=line
-                elif re.match(r'^(?:La justification|reason)\s*[:：]',line,re.I):cur['reason']=line
-                elif nid and fmt in ('lowerLetter','upperLetter'):
-                    opt_counts[nid]+=1;cur.setdefault('options',{})[chr(64+min(opt_counts[nid],26))]=strip_inline_key(line)
-                else:
-                    opts=inline_options(line)
-                    if opts:cur['options'].update(opts)
-                    else:cur['question_text']=clean(cur['question_text']+' '+strip_inline_key(line))
-                continue
-            if match:
-                opts=inline_options(line)
-                if opts:cur['options'].update(opts)
-                else:cur['question_text']=clean(cur['question_text']+'\n'+line)
-                continue
-            if nid and fmt in ('lowerLetter','upperLetter'):
-                opt_counts[nid]+=1;label=chr(64+min(opt_counts[nid],26));body=strip_inline_key(line)
-                opts=inline_options(body)
-                if opts:
-                    cur['options'].update(opts)
-                    if label not in cur['options']:
-                        prefix=clean(re.split(r'(?:^|\s)[b-dB-D]\s*[\.)\-:]\s*',body,maxsplit=1,flags=re.I)[0])
-                        if prefix:cur['options'][label]=prefix
-                else:cur['options'][label]=body
-                continue
-            opts=inline_options(line)
-            if opts:cur['options'].update(opts)
-            else:cur['question_text']=clean(cur['question_text']+' '+strip_inline_key(line))
+        if re.search(r'\b(?:match the following|match\s+the|reliez|associez|பொருத்துக)\b',line,re.I):
+            n=numbered(line)
+            start(n[1] if n else line,'MATCH',n[0] if n else None)
             continue
 
-        # Only explicit task/question forms are accepted without Word numbering.
-        if re.match(r'^(?:Traduisez|Conjuguez|Nommez|Que |Qui |Comment |Combien |Pourquoi |Quelle|Qu’est|Est-ce|Explain|Define|Describe|Discuss|State|Write)\b',line,re.I):
-            start(line,'VSA',None)
+        if re.search(r'\b(?:assertion\s*(?:and|&)\s*reason|assertion\s*&\s*reasoning)\b',line,re.I):
+            start(line,'ASSERTION_REASON',None)
+            continue
+
+        n=numbered(line)
+        auto_q=(num is not None and fmts.get(num)=='decimal' and not in_match and not option_tokens(line))
+        if n and not in_match:
+            body=n[1]
+            start(body,active.get('question_type'),n[0])
+            continue
+        if auto_q:
+            start(line,active.get('question_type'),None)
+            continue
+
+        if not current:
+            if active.get('question_type') and re.match(r'^(?:Explain|Define|Describe|Discuss|State|Write|Why|What|How|When|Who|Which|Comment|Analyse|Analyze|Assess|Evaluate|Examine|Critically)\b',line,re.I):
+                start(line,active['question_type'],None)
+            continue
+
+        # Assertion/Reason labels must be retained separately.
+        if re.match(r'^assertion\s*[:：]',line,re.I):
+            current['assertion']=line
+            continue
+        if re.match(r'^reason\s*[:：]',line,re.I):
+            current['reason']=line
+            continue
+
+        opts=option_tokens(line)
+        if opts:
+            current.setdefault('options',{}).update(opts)
+            continue
+
+        if in_match:
+            current['match_text']=clean(current.get('match_text','')+' '+line)
+            continue
+
+        if current.get('question_type')=='PASSAGE':
+            current['passage_text']=clean(current.get('passage_text','')+' '+line)
+        else:
+            current['question_text']=clean(current['question_text']+' '+line)
 
     flush()
+
     for q in qs:
-        if q['question_type']=='VSA' and len(q.get('options',{}))>=2:q['question_type']='MCQ'
-        if q['question_type']=='MCQ' and not q.get('answer_key'):q.setdefault('warnings',[]).append('MCQ answer key missing')
+        if q['question_type']=='VSA' and len(q.get('options',{}))>=2:
+            q['question_type']='MCQ'
         q['parse_status']='warning' if q.get('warnings') else 'ready'
     return qs
 
@@ -237,7 +314,7 @@ def main():
         except Exception:marks={}
     try:
         qs=parse_docx(path,marks)
-        print(json.dumps({'success':True,'count':len(qs),'questions':qs,'parser_version':'docx-structure-v2.0'},ensure_ascii=False))
+        print(json.dumps({'success':True,'count':len(qs),'questions':qs,'parser_version':'docx-structure-v2.1-hindi-regression'},ensure_ascii=False))
     except Exception as e:
         print(json.dumps({'success':False,'message':str(e),'parser_version':'docx-structure-v2.0'},ensure_ascii=False));sys.exit(1)
 
