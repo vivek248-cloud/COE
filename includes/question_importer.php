@@ -567,12 +567,42 @@ function qps_docx_parse(string $path, array $sectionMarks = []): array {
     if (file_exists($pyScript)) {
         $output = []; $ret = -1;
         $marksArg = escapeshellarg(json_encode($sectionMarks, JSON_UNESCAPED_UNICODE));
-        $pythonCandidates = [getenv('QPS_PYTHON') ?: 'python', 'python3'];
+        // Windows/XAMPP commonly has the Python launcher (py.exe) even when
+        // the Microsoft Store "python" alias is broken. Prefer an explicit
+        // QPS_PYTHON override, then try the launcher and common executables.
+        $configuredPython = trim((string)(getenv('QPS_PYTHON') ?: ''));
+        $pythonCandidates = [];
+        if ($configuredPython !== '') {
+            $pythonCandidates[] = $configuredPython;
+        }
+        $pythonCandidates = array_merge($pythonCandidates, [
+            'py -3',
+            'python',
+            'python3',
+            'C:\\Python312\\python.exe',
+            'C:\\Python311\\python.exe',
+            'C:\\Python310\\python.exe',
+            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python312\\python.exe' : '',
+            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python311\\python.exe' : '',
+            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python310\\python.exe' : ''
+        ]);
+        $pythonCandidates = array_values(array_unique(array_filter($pythonCandidates, static function($v) {
+            return trim((string)$v) !== '';
+        })));
+
+        $pythonTried = [];
         foreach ($pythonCandidates as $py) {
             $output = []; $ret = -1;
+            $pythonTried[] = $py;
             $cmd = $py . ' ' . escapeshellarg($pyScript) . ' ' . escapeshellarg($path) . ' --section_marks ' . $marksArg;
             @exec($cmd . ' 2>&1', $output, $ret);
-            if ($ret === 0 && !empty($output)) break;
+            if ($ret === 0 && !empty($output)) {
+                $jsonStr = implode("\n", $output);
+                $parsed = json_decode($jsonStr, true);
+                if (is_array($parsed) && !empty($parsed['success']) && !empty($parsed['questions'])) {
+                    return $parsed['questions'];
+                }
+            }
         }
         if ($ret === 0 && !empty($output)) {
             $jsonStr = implode("\n", $output);
@@ -586,9 +616,15 @@ function qps_docx_parse(string $path, array $sectionMarks = []): array {
     // The structure-aware Python parser is the canonical DOCX parser.
     // Do not silently fall back to the old generic paragraph parser: that path can
     // flatten Match/Assertion/Passage blocks and create false questions.
-    if (getenv('QPS_ALLOW_LEGACY_DOCX_FALLBACK') !== '1') {
+    // If Python/python-docx is not installed, keep the upload functional by
+    // using the existing PHP DOCX parser. Set QPS_DISABLE_LEGACY_DOCX_FALLBACK=1
+    // in production when Python is guaranteed to be installed.
+    if (getenv('QPS_DISABLE_LEGACY_DOCX_FALLBACK') === '1') {
         $details = !empty($output) ? implode("\n", array_slice($output, -8)) : 'Python extractor was unavailable or returned no valid JSON.';
-        throw new RuntimeException('DOCX structure-aware extractor failed. Configure QPS_PYTHON/python-docx correctly. Details: ' . $details);
+        throw new RuntimeException(
+            'DOCX structure-aware extractor is unavailable. Install Python 3 + python-docx/lxml or set QPS_PYTHON to python.exe. Tried: '
+            . implode(', ', $pythonTried ?? []) . '. Details: ' . $details
+        );
     }
 
     // 2. Optional legacy PHP fallback (explicitly enabled for emergency compatibility).
