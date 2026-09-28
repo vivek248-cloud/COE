@@ -130,7 +130,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
         </div>
         <h2 class="text-xl sm:text-2xl font-extrabold mt-2.5 tracking-tight">Question Bank Repository & Smart OBE Verification</h2>
         <p class="text-stone-300 text-xs mt-1.5 max-w-3xl leading-relaxed">
-          Upload Word (DOCX), PDF, Excel (XLSX), CSV, or JSON question banks. Features auto-language detection (English, Tamil, French), duplicate question detection with instant replace options, unit-subunit tracking, and answer key management.
+          Upload Word (DOCX), PDF, Excel (XLSX), or CSV question banks using the staff-simple format. Staff only need to provide Question Number, Section, Marks, K-Level, CO and Question. The importer detects question type and extracts MCQ options when possible.
         </p>
       </div>
       <div class="flex items-center gap-2.5">
@@ -286,12 +286,10 @@ require_once __DIR__ . '/../../includes/navbar.php';
 
       <!-- Blueprint Allocation Target -->
       <div>
-        <label class="block font-bold text-slate-700 mb-1">Blueprint Allocation Target *</label>
-        <select id="blueprint_allocation_target" class="w-full border border-stone-300 rounded-2xl p-2.5 bg-stone-50 font-bold shadow-sm">
-          <option value="275_pool">Master 275-Question Pool Allocation (Units 1.1-5.5 • All K-Levels)</option>
-          <option value="30_standard">Standard 30-Question Paper Blueprint (75 Marks • Holy Cross Autonomous)</option>
-          <option value="custom">General Curriculum Question Pool</option>
-        </select>
+        <label class="block font-bold text-slate-700 mb-1">Import Format</label>
+        <div class="w-full border border-stone-300 rounded-2xl p-2.5 bg-emerald-50 text-emerald-900 font-bold shadow-sm">
+          Staff Simple Format — Q.No • Section • Marks • K-Level • CO • Question
+        </div>
       </div>
 
     </div>
@@ -305,13 +303,11 @@ require_once __DIR__ . '/../../includes/navbar.php';
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
         </div>
         <div>
-          <h4 class="font-extrabold text-slate-900 text-xs uppercase tracking-wider" id="txt-tpl-title">Download Official OBE Question Bank Templates</h4>
-          <p class="text-[11px] text-slate-500" id="txt-tpl-desc">Pre-formatted templates adhering to Holy Cross Bloom's Taxonomy & 275-Question Pool Matrix.</p>
+          <h4 class="font-extrabold text-slate-900 text-xs uppercase tracking-wider" id="txt-tpl-title">Download Staff Question Bank Templates</h4>
+          <p class="text-[11px] text-slate-500" id="txt-tpl-desc">Simple upload templates designed for teaching staff. Enter only Q.No, Section, Marks, K-Level, CO and Question.</p>
         </div>
       </div>
-      <span class="text-[10px] font-bold text-indigo-800 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200 self-start sm:self-auto">
-        DOCX • XLSX • CSV • JSON
-      </span>
+      <span class="text-[10px] font-bold text-indigo-800 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200 self-start sm:self-auto">DOCX • XLSX • CSV</span>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
