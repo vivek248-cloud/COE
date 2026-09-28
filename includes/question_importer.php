@@ -583,7 +583,15 @@ function qps_docx_parse(string $path, array $sectionMarks = []): array {
         }
     }
 
-    // 2. Fallback to native PHP DOMDocument parsing
+    // The structure-aware Python parser is the canonical DOCX parser.
+    // Do not silently fall back to the old generic paragraph parser: that path can
+    // flatten Match/Assertion/Passage blocks and create false questions.
+    if (getenv('QPS_ALLOW_LEGACY_DOCX_FALLBACK') !== '1') {
+        $details = !empty($output) ? implode("\n", array_slice($output, -8)) : 'Python extractor was unavailable or returned no valid JSON.';
+        throw new RuntimeException('DOCX structure-aware extractor failed. Configure QPS_PYTHON/python-docx correctly. Details: ' . $details);
+    }
+
+    // 2. Optional legacy PHP fallback (explicitly enabled for emergency compatibility).
     $zip = qps_zip_entries($path);
     $xml = qps_zip_read_entry($zip, 'word/document.xml');
     if ($xml === null) throw new RuntimeException('DOCX document.xml not found.');
