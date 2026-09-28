@@ -30,8 +30,8 @@ function qps_text_signature(string $s): string {
  */
 function qps_question_signature(array $q): string {
     $parts = [
-        (string)($q['question_type'] ?? ''),
         (string)($q['question_text'] ?? ''),
+        (string)($q['options_json'] ?? json_encode($q['options'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
         json_encode($q['options'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         (string)($q['assertion'] ?? ''),
         (string)($q['reason'] ?? ''),
@@ -154,7 +154,7 @@ try {
     $dbExistingQuestions = [];
     if ($paperCode !== '') {
         try {
-            $stEx = $pdo->prepare("SELECT q.id, q.q_number, q.unit_no, q.sub_unit, q.section_type, q.k_level, q.question_text, q.marks, qb.academic_year
+            $stEx = $pdo->prepare("SELECT q.id, q.q_number, q.unit_no, q.sub_unit, q.section_type, q.k_level, q.question_text, q.options_json, q.marks, qb.academic_year
                                    FROM questions q
                                    JOIN question_banks qb ON qb.id = q.bank_id
                                    WHERE UPPER(qb.paper_code) = ? ORDER BY q.id ASC");
