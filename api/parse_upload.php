@@ -23,6 +23,24 @@ function qps_text_signature(string $s): string {
     return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
 }
 
+/**
+ * Build a duplicate fingerprint from the complete logical question content.
+ * The old importer compared only question_text, which can incorrectly treat
+ * two MCQs with the same stem but different options as identical.
+ */
+function qps_question_signature(array $q): string {
+    $parts = [
+        (string)($q['question_type'] ?? ''),
+        (string)($q['question_text'] ?? ''),
+        json_encode($q['options'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        (string)($q['assertion'] ?? ''),
+        (string)($q['reason'] ?? ''),
+        (string)($q['passage_text'] ?? ''),
+        json_encode($q['sub_questions'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+    ];
+    return qps_text_signature(implode(' ', $parts));
+}
+
 try {
     qps_ensure_aux_schema($pdo);
     $maxUploadMb = MAX_UPLOAD_MB;
@@ -82,6 +100,28 @@ try {
     }
 
     $questions = $result['questions'] ?? [];
+
+    // Parser diagnostics are returned to the preview UI. DOCX v2 attaches
+    // confidence/status/warnings per logical question; these must never be
+    // hidden or silently discarded.
+    $parserWarnings = [];
+    $parserWarningCount = 0;
+    $lowConfidenceCount = 0;
+    foreach ($questions as $pq) {
+        foreach (($pq['warnings'] ?? []) as $pw) {
+            $parserWarningCount++;
+            if (count($parserWarnings) < 20) {
+                $parserWarnings[] = [
+                    'q_number' => $pq['q_number'] ?? null,
+                    'message' => (string)$pw
+                ];
+            }
+        }
+        if ((float)($pq['parser_confidence'] ?? 1) < 0.75) {
+            $lowConfidenceCount++;
+        }
+    }
+
     if (count($questions) < 1) {
         throw new RuntimeException('No numbered questions could be extracted from the uploaded file.');
     }
@@ -131,14 +171,14 @@ try {
     // Index DB questions by normalized signature
     $dbSignatures = [];
     foreach ($dbExistingQuestions as $dbq) {
-        $sig = qps_text_signature($dbq['question_text']);
+        $sig = qps_question_signature($dbq);
         if ($sig !== '') {
             $dbSignatures[$sig] = $dbq;
         }
     }
 
     foreach ($questions as $idx => &$q) {
-        $sig = qps_text_signature($q['question_text']);
+        $sig = qps_question_signature($q);
         $q['is_duplicate'] = false;
         $q['duplicate_info'] = null;
         $q['replace_action'] = 'append'; // 'append', 'replace', or 'skip'
@@ -223,6 +263,13 @@ try {
         ],
         'questions' => $questions,
         'question_count' => count($questions),
+        'parser' => [
+            'version' => ($ext === 'docx' ? 'docx-structure-v2.0' : strtoupper($ext) . '-legacy'),
+            'warning_count' => $parserWarningCount,
+            'warnings' => $parserWarnings,
+            'low_confidence_count' => $lowConfidenceCount,
+            'review_required' => ($parserWarningCount > 0 || $lowConfidenceCount > 0)
+        ],
         'duplicate_count' => $duplicateCount,
         'duplicates' => $duplicates,
         'has_duplicates' => $duplicateCount > 0,
