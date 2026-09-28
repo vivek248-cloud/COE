@@ -1,0 +1,6 @@
+﻿q_number,unit_no,section_type,marks,k_level,co_level,question_text,formula_latex
+1,1,Part A,2,K1,CO1,Define the key concept in one or two sentences.,
+2,1,Part A,2,K2,CO1,Explain the difference between the two concepts with a suitable example.,
+3,1,Part B,13,K3,CO1,Solve the following problem and show all required steps. $x^2+5x+6=0$.,x^2+5x+6=0
+4,2,Part B,13,K4,CO2,Analyze the given case study. Include the required diagram/formula if applicable.,
+5,3,Part C,15,K5,CO3,Design a solution for the given problem and justify your approach.,

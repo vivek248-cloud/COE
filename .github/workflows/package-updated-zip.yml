@@ -1,0 +1,23 @@
+name: Build COE Updated ZIP
+
+on:
+  push:
+    branches:
+      - feature/structure-aware-importer-v1
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create ZIP
+        run: |
+          zip -r "COE-structure-aware-importer-v1.zip" . \
+            -x ".git/*" \
+            -x "COE-structure-aware-importer-v1.zip"
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: COE-structure-aware-importer-v1
+          path: COE-structure-aware-importer-v1.zip
+          retention-days: 7

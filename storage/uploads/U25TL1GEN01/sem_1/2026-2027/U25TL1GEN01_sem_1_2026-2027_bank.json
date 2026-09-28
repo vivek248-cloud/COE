@@ -1,0 +1,62 @@
+{
+    "schema_version": "3.0",
+    "institution": "HOLY CROSS COLLEGE (AUTONOMOUS)",
+    "metadata": {
+        "staff_code": "GU2018CO03",
+        "staff_name": "Ms.Muthukala",
+        "dept_code": "GL",
+        "dept_name": "GL",
+        "paper_code": "U25TL1GEN01",
+        "course_title": "General Tamil I",
+        "semester": "Semester 1",
+        "academic_year": "2026-2027",
+        "exam_type": "Odd Semester End Examination",
+        "regulation": "2024 (OBE)",
+        "degree_level": "UG",
+        "max_marks": 50,
+        "language": "ta",
+        "total_questions": 2,
+        "status": "Submitted to HOD",
+        "created_at": "2026-09-24 12:24:00"
+    },
+    "questions": [
+        {
+            "q_number": 1,
+            "unit_no": 1,
+            "sub_unit": "1.1",
+            "section_type": "SECTION-A",
+            "marks": 1,
+            "k_level": "K1",
+            "co_level": "CO1",
+            "question_text": "கம்பராமாயணத்தை இயற்றியவர் யார்? (அ) கம்பர் (ஆ) பாரதியார் (இ) கபிலர் (ஈ) திருவள்ளுவர்",
+            "answer_key": "அ",
+            "options": [],
+            "options_json": null,
+            "language": "ta",
+            "has_formula": 0,
+            "formula_latex": "",
+            "image_url": "",
+            "replace_action": "append",
+            "existing_id": null
+        },
+        {
+            "q_number": 2,
+            "unit_no": 1,
+            "sub_unit": "1.2",
+            "section_type": "SECTION-A",
+            "marks": 1,
+            "k_level": "K2",
+            "co_level": "CO2",
+            "question_text": "சிலப்பதிகாரத்தின் முதன்மைக் காப்பியக் கதாபாத்திரம் யார்?",
+            "answer_key": "கண்ணகி",
+            "options": [],
+            "options_json": null,
+            "language": "ta",
+            "has_formula": 0,
+            "formula_latex": "",
+            "image_url": "",
+            "replace_action": "append",
+            "existing_id": null
+        }
+    ]
+}
