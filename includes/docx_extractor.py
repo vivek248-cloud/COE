@@ -285,13 +285,50 @@ def parse_docx(path,section_marks=None):
             current['reason']=line
             continue
 
+        # One option per paragraph is common in Assertion/Reason blocks.
+        single_opt=re.match(r'^\s*([A-Da-d])\s*[\.)\-:]\s*(.+)
+
+        if current.get('question_type')=='PASSAGE':
+            current['passage_text']=clean(current.get('passage_text','')+' '+line)
+        else:
+            current['question_text']=clean(current['question_text']+' '+line)
+
+    flush()
+
+    for q in qs:
+        if q['question_type']=='VSA' and len(q.get('options',{}))>=2:
+            q['question_type']='MCQ'
+        q['parse_status']='warning' if q.get('warnings') else 'ready'
+    return qs
+
+def main():
+    path=sys.argv[1];marks={}
+    if '--section_marks' in sys.argv:
+        try:marks=json.loads(sys.argv[sys.argv.index('--section_marks')+1])
+        except Exception:marks={}
+    try:
+        qs=parse_docx(path,marks)
+        print(json.dumps({'success':True,'count':len(qs),'questions':qs,'parser_version':'docx-structure-v2.1-hindi-regression'},ensure_ascii=False))
+    except Exception as e:
+        print(json.dumps({'success':False,'message':str(e),'parser_version':'docx-structure-v2.0'},ensure_ascii=False));sys.exit(1)
+
+if __name__=='__main__':main()
+,line)
+        if single_opt and (in_ar or (not in_match and current.get('question_type')=='MCQ')):
+            current.setdefault('options',{})[single_opt.group(1).upper()]=clean(single_opt.group(2))
+            continue
+
         opts=option_tokens(line)
-        if opts:
+        if opts and not in_match:
             current.setdefault('options',{}).update(opts)
             continue
 
         if in_match:
-            current['match_text']=clean(current.get('match_text','')+' '+line)
+            # Match answer panels are options; preserve Column A/B rows as match_text.
+            if opts:
+                current.setdefault('options',{}).update(opts)
+            else:
+                current['match_text']=clean(current.get('match_text','')+' '+line)
             continue
 
         if current.get('question_type')=='PASSAGE':
