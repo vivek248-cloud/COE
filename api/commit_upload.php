@@ -272,6 +272,50 @@ try {
     // -------------------------------------------------------------
     $pdo->beginTransaction();
     $now = date('Y-m-d H:i:s');
+    $importId = null;
+    try {
+        $importStmt = $pdo->prepare("INSERT INTO qps_imports (
+            bank_id, token_hash, source_file_name, source_format, file_size_bytes,
+            parser_version, schema_version, detected_language, ocr_used,
+            total_questions, duplicate_questions, warning_count, low_confidence_count,
+            status, diagnostics_json, created_by, created_at
+        ) VALUES (NULL, ?, ?, ?, ?, ?, '4.0', ?, ?, ?, ?, ?, ?, 'VALIDATED', ?, ?, ?)");
+        $parserVersionForImport = !empty($finalQuestions[0]['parser_version']) ? $finalQuestions[0]['parser_version'] : 'php-legacy';
+        $warningCountForImport = 0;
+        $lowConfidenceForImport = 0;
+        foreach ($questions as $iq) {
+            $warningCountForImport += count($iq['warnings'] ?? []);
+            if ((float)($iq['parser_confidence'] ?? 1) < 0.75) $lowConfidenceForImport++;
+        }
+        $importDiagnostics = [
+            'parser_version' => $parserVersionForImport,
+            'schema_version' => '4.0',
+            'question_count' => count($questions),
+            'duplicate_warnings' => count($duplicateWarnings),
+            'warning_count' => $warningCountForImport,
+            'low_confidence_count' => $lowConfidenceForImport
+        ];
+        $importStmt->execute([
+            hash('sha256', (string)($source['token'] ?? '')),
+            $sourceName,
+            $sourceExt,
+            (int)($source['size'] ?? 0),
+            $parserVersionForImport,
+            $bankLanguage,
+            $ocrUsed,
+            count($questions),
+            count($duplicateWarnings),
+            $warningCountForImport,
+            $lowConfidenceForImport,
+            json_encode($importDiagnostics, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $user['staff_code'] ?? 'SYSTEM',
+            $now
+        ]);
+        $importId = (int)$pdo->lastInsertId();
+    } catch (Throwable $e) {
+        // Older installations may not yet have qps_imports; the core bank commit remains usable.
+        $importId = null;
+    }
 
     // Find existing question bank
     if (!$bankId) {
@@ -473,7 +517,67 @@ try {
     @file_put_contents($jsonArchivePath, $finalJsonStr);
     if (function_exists('gzencode')) @file_put_contents($jsonArchivePath . '.gz', gzencode($finalJsonStr, 9));
     $finalContentHash=hash('sha256',$finalJsonStr);
-    $pdo->prepare("UPDATE question_banks SET questions_json = ?, content_hash = ?, total_questions = ?, version_no = ? WHERE id = ?")->execute([$finalJsonStr,$finalContentHash,count($finalQuestions),$version,$bankId]);
+    $pdo->prepare("UPDATE question_banks SET questions_json = ?, content_hash = ?, total_questions = ?, version_no = ?, schema_version = ? WHERE id = ?")->execute([$finalJsonStr,$finalContentHash,count($finalQuestions),$version,'4.0',$bankId]);
+
+    // Immutable bank snapshot: relational rows are the query source; this JSON is the
+    // reproducible version archive used for rollback/export/audit.
+    try {
+        $pdo->prepare("INSERT INTO qps_bank_versions (
+            bank_id, version_no, schema_version, questions_json, metadata_json,
+            source_file_name, source_format, source_path, ocr_language, ocr_used,
+            question_count, content_hash, created_by, created_at
+        ) VALUES (?, ?, '4.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        ->execute([
+            $bankId, $version, $finalJsonStr,
+            json_encode($jsonPayload['metadata'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $sourceName, $sourceExt, $archiveRelPath, $ocrLang, $ocrUsed,
+            count($finalQuestions), $finalContentHash,
+            $user['staff_code'] ?? 'SYSTEM', $now
+        ]);
+    } catch (Throwable $e) {
+        // Backward-compatible fallback for the older qps_bank_versions schema.
+        $pdo->prepare("INSERT INTO qps_bank_versions (
+            bank_id, version_no, questions_json, source_file_name, source_format,
+            source_path, ocr_language, ocr_used, content_hash, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        ->execute([
+            $bankId, $version, $finalJsonStr, $sourceName, $sourceExt,
+            $archiveRelPath, $ocrLang, $ocrUsed, $finalContentHash,
+            $user['staff_code'] ?? 'SYSTEM', $now
+        ]);
+    }
+
+    if ($importId) {
+        $pdo->prepare("UPDATE qps_imports SET bank_id = ?, status = 'COMMITTED', completed_at = ? WHERE id = ?")
+            ->execute([$bankId, $now, $importId]);
+        try {
+            $pdo->prepare("UPDATE question_banks SET last_import_id = ?, current_version_id = (
+                SELECT id FROM qps_bank_versions WHERE bank_id = ? AND version_no = ? ORDER BY id DESC LIMIT 1
+            ) WHERE id = ?")->execute([$importId, $bankId, $version, $bankId]);
+        } catch (Throwable $e) {}
+    }
+
+    $pdo->prepare("INSERT INTO qps_upload_history (
+        bank_id, staff_code, action, source_file_name, source_format,
+        question_count, ocr_used, message, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    ->execute([
+        $bankId, $user['staff_code'] ?? 'SYSTEM',
+        $version > 1 ? 'REUPLOAD' : 'UPLOAD',
+        $sourceName, $sourceExt, count($finalQuestions), $ocrUsed,
+        'PHP v4 import committed successfully. JSON snapshot archived as version ' . $version . '.',
+        $now
+    ]);
+
+    try {
+        qps_audit($pdo, $version > 1 ? 'QUESTION_BANK_REUPLOAD' : 'QUESTION_BANK_UPLOAD', 'QUESTION_BANK', (string)$bankId, [
+            'version' => $version,
+            'question_count' => count($finalQuestions),
+            'parser_version' => $finalQuestions[0]['parser_version'] ?? 'php-legacy',
+            'schema_version' => '4.0',
+            'source_format' => $sourceExt
+        ]);
+    } catch (Throwable $e) {}
 
     $pdo->commit();
 
