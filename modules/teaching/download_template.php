@@ -1,7 +1,7 @@
 <?php
 /**
  * COE Staff Question Bank Template Downloader v3.
- * Staff-required fields: Q.No, Section, Marks, K-Level, CO, Question.
+ * Staff-required fields: Q.No, Unit, Sub-Unit, K-Level, CO, Section, Marks, Question.
  */
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/db.php';
@@ -52,23 +52,23 @@ header('Content-Disposition: attachment; filename="'.$prefix.'.csv"');
 echo "\xEF\xBB\xBF";
 $out=fopen('php://output','w');
 
-if($lang==='tamil') $headers=['வினா எண்','பகுதி','மதிப்பெண்','K-நிலை','CO','வினா'];
-elseif($lang==='hindi') $headers=['प्रश्न सं.','सेक्शन','अंक','K-स्तर','CO','प्रश्न'];
-elseif($lang==='french') $headers=['N° Q','Section','Points','Niveau K','CO','Question'];
-else $headers=['Q.No','Section','Marks','K-Level','CO','Question'];
+if($lang==='tamil') $headers=['வினா எண்','அலகு','துணை அலகு','K-நிலை','CO','பகுதி','மதிப்பெண்','வினா'];
+elseif($lang==='hindi') $headers=['प्रश्न सं.','यूनिट','उप-यूनिट','K-स्तर','CO','सेक्शन','अंक','प्रश्न'];
+elseif($lang==='french') $headers=['N° Q','Unité','Sous-unité','Niveau K','CO','Section','Points','Question'];
+else $headers=['Q.No','Unit','Sub-Unit','K-Level','CO','Section','Marks','Question'];
 fputcsv($out,$headers);
 
 $rows=[
- [1,'A',1,'K1','CO1','Which of the following data structures follows LIFO? (a) Queue (b) Stack (c) Tree (d) Graph'],
- [2,'A',2,'K2','CO1','Explain the given concept briefly.'],
- [3,'B',5,'K3','CO2','Discuss the significance of the given topic.'],
- [4,'C',10,'K4','CO3','Analyse the topic with suitable examples.']
+ [1,1,'1.1','K1','CO1','A',1,'Which of the following data structures follows LIFO? (a) Queue (b) Stack (c) Tree (d) Graph'],
+ [2,1,'1.2','K2','CO1','A',2,'Explain the given concept briefly.'],
+ [3,1,'1.3','K3','CO2','B',5,'Discuss the significance of the given topic.'],
+ [4,1,'1.4','K4','CO3','C',10,'Analyse the topic with suitable examples.']
 ];
 if($lang==='tamil') $rows=[
- [1,'A',1,'K1','CO1','பின்வருவனவற்றில் சரியான விடையைத் தேர்ந்தெடுக்கவும். (a) ஒன்று (b) இரண்டு (c) மூன்று (d) நான்கு'],
- [2,'A',2,'K2','CO1','இந்தக் கருத்தைச் சுருக்கமாக விளக்குக.'],
- [3,'B',5,'K3','CO2','இந்தத் தலைப்பின் முக்கியத்துவத்தை விளக்குக.'],
- [4,'C',10,'K4','CO3','இந்தத் தலைப்பை பகுப்பாய்வு செய்து பொருத்தமான எடுத்துக்காட்டுகளுடன் விளக்குக.']
+ [1,1,'1.1','K1','CO1','A',1,'பின்வருவனவற்றில் சரியான விடையைத் தேர்ந்தெடுக்கவும். (a) ஒன்று (b) இரண்டு (c) மூன்று (d) நான்கு'],
+ [2,1,'1.2','K2','CO1','A',2,'இந்தக் கருத்தைச் சுருக்கமாக விளக்குக.'],
+ [3,1,'1.3','K3','CO2','B',5,'இந்தத் தலைப்பின் முக்கியத்துவத்தை விளக்குக.'],
+ [4,1,'1.4','K4','CO3','C',10,'இந்தத் தலைப்பை பகுப்பாய்வு செய்து பொருத்தமான எடுத்துக்காட்டுகளுடன் விளக்குக.']
 ];
 elseif($lang==='hindi') $rows=[
  [1,'A',1,'K1','CO1','सही उत्तर चुनिए। (a) एक (b) दो (c) तीन (d) चार'],
@@ -77,10 +77,10 @@ elseif($lang==='hindi') $rows=[
  [4,'C',10,'K4','CO3','इस विषय का विश्लेषण उदाहरण सहित कीजिए।']
 ];
 elseif($lang==='french') $rows=[
- [1,'A',1,'K1','CO1','Choisissez la bonne réponse. (a) Un (b) Deux (c) Trois (d) Quatre'],
- [2,'A',2,'K2','CO1','Expliquez brièvement ce sujet.'],
- [3,'B',5,'K3','CO2','Discutez l’importance de ce sujet.'],
- [4,'C',10,'K4','CO3','Analysez ce sujet avec des exemples appropriés.']
+ [1,1,'1.1','K1','CO1','A',1,'Choisissez la bonne réponse. (a) Un (b) Deux (c) Trois (d) Quatre'],
+ [2,1,'1.2','K2','CO1','A',2,'Expliquez brièvement ce sujet.'],
+ [3,1,'1.3','K3','CO2','B',5,'Discutez l’importance de ce sujet.'],
+ [4,1,'1.4','K4','CO3','C',10,'Analysez ce sujet avec des exemples appropriés.']
 ];
 foreach($rows as $row) fputcsv($out,$row);
 fclose($out); exit;
