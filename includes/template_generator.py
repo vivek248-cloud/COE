@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """COE Staff Simple Question Bank Template v3.
 Required staff fields: Q.No, Unit, Sub-Unit, K-Level, CO, Section, Marks, Question.
-Question Type, Unit/Sub-Unit, options and answer keys are optional; the importer
-infers them when possible and never invents missing staff data.
+Question Type, options and answer keys are optional. Unit/Sub-Unit are part of the standard staff structure.
 """
 import argparse
 import docx
@@ -23,11 +22,11 @@ LANG={
   'labels':['Q.NO:','UNIT:','SUB-UNIT:','K-LEVEL:','CO:','SECTION:','MARKS:','QUESTION:'],
   'samples':[
    [1,1,'1.1','K1','CO1','A',1,'Which of the following data structures follows the Last-In-First-Out (LIFO) principle? (a) Queue (b) Stack (c) Linked List (d) Tree'],
-   [2,'A',1,'K2','CO1','Why was the Constituent Assembly important for India?'],
+   [2,1,'1.2','K2','CO1','A',1,'Why was the Constituent Assembly important for India?'],
    [3,1,'1.3','K3','CO2','B',5,'Explain the role of democratic institutions in nation building.'],
    [4,1,'1.4','K4','CO3','C',10,'Analyse the major factors and discuss their impact on society.']
   ],
-  'notes':['These eight fields are required: Question Number, Unit, Sub-Unit, K-Level, CO-Level, Section, Marks and Question.','Do NOT enter Question Type. The system detects MCQ, VSA, Match, Assertion-Reason, Paragraph and Essay where possible.','For MCQ, write options inside the Question field using (a), (b), (c), (d) or A., B., C., D. The system extracts them.','Unit/Sub-Unit is optional. If the source document has Unit/1.1 headings, the importer captures them; otherwise they remain blank for COE review.','Marks, Section, K-Level and CO are read from each question block and are never replaced with section defaults when explicitly supplied.','Use Unicode text for English, Tamil, Hindi or French.']
+  'notes':['These eight fields are required: Question Number, Unit, Sub-Unit, K-Level, CO-Level, Section, Marks and Question.','Do NOT enter Question Type. The system detects MCQ, VSA, Match, Assertion-Reason, Paragraph and Essay where possible.','For MCQ, write options inside the Question field using (a), (b), (c), (d) or A., B., C., D. The system extracts them.','Unit and Sub-Unit are required in the standard staff template. Legacy documents may omit them and will receive a review warning.','Marks, Section, K-Level and CO are read from each question block and are never replaced with section defaults when explicitly supplied.','Use Unicode text for English, Tamil, Hindi or French.']
  },
  'tamil':{
   'title':'தூய சிலுவைக் கல்லூரி (தன்னாட்சி), திருச்சிராப்பள்ளி',
@@ -35,7 +34,7 @@ LANG={
   'headers':['வினா எண்','அலகு','துணை அலகு','K-நிலை','CO','பகுதி','மதிப்பெண்','வினா'],
   'labels':['வினா எண்:','அலகு:','துணை அலகு:','K-நிலை:','CO:','பகுதி:','மதிப்பெண்:','வினா:'],
   'samples':[[1,1,'1.1','K1','CO1','A',1,'பின்வருவனவற்றில் சரியான விடையைத் தேர்ந்தெடுக்கவும். (a) ஒன்று (b) இரண்டு (c) மூன்று (d) நான்கு'],[2,1,'1.2','K2','CO1','A',2,'இந்தக் கருத்தைச் சுருக்கமாக விளக்குக.'],[3,1,'1.3','K3','CO2','B',5,'இந்தக் கோட்பாட்டின் முக்கியத்துவத்தை விளக்குக.'],[4,1,'1.4','K4','CO3','C',10,'இந்தத் தலைப்பை பகுப்பாய்வு செய்து விவாதிக்கவும்.']],
-  'notes':['பணியாளர் நிரப்ப வேண்டிய எட்டு புலங்கள்: வினா எண், அலகு, துணை அலகு, K-நிலை, CO, பகுதி, மதிப்பெண், வினா.','வினா வகையை நிரப்ப வேண்டாம்; அமைப்பு தானாகக் கண்டறியும்.','MCQ விருப்பங்களை வினா புலத்திலேயே (a), (b), (c), (d) வடிவில் கொடுக்கவும்.','Unit/Sub-Unit விருப்பமானது; இருந்தால் அமைப்பு எடுத்துக்கொள்ளும்.','ஒவ்வொரு வினாவிற்கும் வழங்கப்பட்ட மதிப்பெண்/பகுதி/K/CO மாற்றப்படாது.']
+  'notes':['பணியாளர் நிரப்ப வேண்டிய எட்டு புலங்கள்: வினா எண், அலகு, துணை அலகு, K-நிலை, CO, பகுதி, மதிப்பெண், வினா.','வினா வகையை நிரப்ப வேண்டாம்; அமைப்பு தானாகக் கண்டறியும்.','MCQ விருப்பங்களை வினா புலத்திலேயே (a), (b), (c), (d) வடிவில் கொடுக்கவும்.','அலகு மற்றும் துணை அலகு நிலையான வடிவத்தின் கட்டாய புலங்கள்.','ஒவ்வொரு வினாவிற்கும் வழங்கப்பட்ட மதிப்பெண்/பகுதி/K/CO மாற்றப்படாது.']
  },
  'hindi':{
   'title':'होली क्रॉस कॉलेज (स्वायत्त), तिरुचिरापल्ली',
@@ -51,7 +50,7 @@ LANG={
   'headers':['N° Q','Unité','Sous-unité','Niveau K','CO','Section','Points','Question'],
   'labels':['N° Q:','UNITÉ:','SOUS-UNITÉ:','NIVEAU K:','CO:','SECTION:','POINTS:','QUESTION:'],
   'samples':[[1,1,'1.1','K1','CO1','A',1,'Choisissez la bonne réponse. (a) Un (b) Deux (c) Trois (d) Quatre'],[2,1,'1.2','K2','CO1','A',2,'Expliquez brièvement ce sujet.'],[3,1,'1.3','K3','CO2','B',5,'Expliquez l’importance de ce concept.'],[4,1,'1.4','K4','CO3','C',10,'Analysez ce sujet et discutez ses effets.']],
-  'notes':['Le personnel renseigne huit champs: N° de question, Unité, Sous-unité, Niveau K, CO, Section, Points et Question.','Le type de question est détecté automatiquement lorsque possible.','Pour un QCM, écrire les choix dans le champ Question avec (a), (b), (c), (d).','Unité/Sous-unité est facultative et sera lue si elle existe dans le document.']
+  'notes':['Le personnel renseigne huit champs: N° de question, Unité, Sous-unité, Niveau K, CO, Section, Points et Question.','Le type de question est détecté automatiquement lorsque possible.','Pour un QCM, écrire les choix dans le champ Question avec (a), (b), (c), (d).','Unité et Sous-unité sont des champs obligatoires du format standard.']
  }
 }
 
