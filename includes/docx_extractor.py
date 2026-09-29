@@ -152,7 +152,7 @@ def parse_docx(path, section_marks=None):
         cur['section_type']='SECTION-'+sec if sec and not sec.startswith('SECTION-') else sec
         cur['k_level']=cur.get('k_level') or active['k_level'] or ''
         cur['co_level']=cur.get('co_level') or active['co_level'] or ''
-        cur['marks']=cur.get('marks') if cur.get('marks') not in (None,'') else marks.get(sec.replace('SECTION-',''),None)
+        cur['marks']=cur.get('marks') if cur.get('marks') not in (None,'') else (active.get('marks') if active.get('marks') not in (None,'') else marks.get(sec.replace('SECTION-',''),None))
         cur['unit_no']=cur.get('unit_no') or (int(active['sub_unit'].split('.')[0]) if active.get('sub_unit') and active['sub_unit'][0].isdigit() else None)
         cur['sub_unit']=cur.get('sub_unit') or active.get('sub_unit','')
         cur['question_type']=cur.get('question_type') or infer_type(cur['question_text'],cur.get('options'))
@@ -228,7 +228,16 @@ def parse_docx(path, section_marks=None):
         v=label_value(line,[r'QUESTION',r'विन?ा',r'प्रश्न'])
         if v is not None and v:
             if not cur: new_question(None)
-            cur['question_text']=clean((cur.get('question_text','')+' '+v))
+            inline_opts=options_from_text(v)
+            if inline_opts:
+                # Keep only the stem in question_text and store options separately.
+                first_opt=min(re.finditer(r'(?:^|\\s)[A-Da-d]\\s*[.)\\-:]\\s*',clean(v)), key=lambda m:m.start())
+                stem=clean(v[:first_opt.start()])
+                cur['question_text']=clean((cur.get('question_text','')+' '+stem))
+                cur.setdefault('options',{}).update(inline_opts)
+                cur['question_type']='MCQ'
+            else:
+                cur['question_text']=clean((cur.get('question_text','')+' '+v))
             continue
 
         # Legacy section headings / metadata.
