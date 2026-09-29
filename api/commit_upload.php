@@ -522,6 +522,11 @@ try {
     // Save final questions JSON with populated relational IDs.
     $jsonPayload['metadata']['total_questions']=count($finalQuestions);
     $jsonPayload['questions']=$finalQuestions;
+    $integrityBasis = json_encode([
+        'metadata' => $jsonPayload['metadata'],
+        'questions' => $jsonPayload['questions']
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $jsonPayload['integrity']['content_hash'] = hash('sha256', (string)$integrityBasis);
     $finalJsonStr=json_encode($jsonPayload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
     @file_put_contents($jsonArchivePath, $finalJsonStr);
     if (function_exists('gzencode')) @file_put_contents($jsonArchivePath . '.gz', gzencode($finalJsonStr, 9));
