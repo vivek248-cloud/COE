@@ -133,6 +133,22 @@ try {
         $img = (string)($q['image_url'] ?? '');
         $hasFormula = (!empty($q['has_formula']) || strpos($qText, '$') !== false || $formula !== '') ? 1 : 0;
         $lang = trim((string)($q['language'] ?? $bankLanguage));
+        $importSchema = trim((string)($q['import_schema'] ?? 'legacy'));
+        $parserVersion = trim((string)($q['parser_version'] ?? ($importSchema === 'staff-v4' ? 'php-staff-v4' : 'php-legacy')));
+        $parserConfidence = isset($q['parser_confidence']) ? (float)$q['parser_confidence'] : 1.0;
+        $validationStatus = $parserConfidence < 0.75 ? 'REVIEW_REQUIRED' : 'VALID';
+        $normalizedText = qps_question_norm($qText);
+        $questionHash = hash('sha256', $normalizedText);
+
+        if ($importSchema === 'staff-v4') {
+            $required = ['unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'];
+            foreach ($required as $rf) {
+                if (!isset($q[$rf]) || trim((string)$q[$rf]) === '') {
+                    throw new RuntimeException('Question #' . (int)($q['q_number'] ?? 0) . ' is missing required field: ' . $rf . '.');
+                }
+            }
+            if (!preg_match('/^CO[1-9][0-9]*$/i', $coNorm)) throw new RuntimeException('Question #' . (int)($q['q_number'] ?? 0) . ' has an invalid CO.');
+        }
 
         $sourceQNo = (int)($q['q_number'] ?? $q['source_q_number'] ?? 0);
         if ($sourceQNo <= 0) $sourceQNo = $numCounter;
@@ -153,6 +169,13 @@ try {
             'formula_latex' => $formula,
             'image_url' => $img,
             'replace_action' => $action,
+            'import_schema' => $importSchema,
+            'parser_version' => $parserVersion,
+            'parser_confidence' => $parserConfidence,
+            'validation_status' => $validationStatus,
+            'normalized_text' => $normalizedText,
+            'question_hash' => $questionHash,
+            'source_question_no' => $sourceQNo,
             'existing_id' => $q['duplicate_info']['existing_id'] ?? null
         ];
 
