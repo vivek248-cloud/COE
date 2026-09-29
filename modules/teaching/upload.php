@@ -288,7 +288,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
       <div>
         <label class="block font-bold text-slate-700 mb-1">Import Format</label>
         <div class="w-full border border-stone-300 rounded-2xl p-2.5 bg-emerald-50 text-emerald-900 font-bold shadow-sm">
-          Staff Simple Format — Q.No • Section • Marks • K-Level • CO • Question
+          Staff Simple Format — Q.No • Unit • Sub-Unit • K-Level • CO • Section • Marks • Question
         </div>
       </div>
 
@@ -304,7 +304,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
         </div>
         <div>
           <h4 class="font-extrabold text-slate-900 text-xs uppercase tracking-wider" id="txt-tpl-title">Download Staff Question Bank Templates</h4>
-          <p class="text-[11px] text-slate-500" id="txt-tpl-desc">Simple upload templates designed for teaching staff. Enter only Q.No, Section, Marks, K-Level, CO and Question.</p>
+          <p class="text-[11px] text-slate-500" id="txt-tpl-desc">Simple upload templates designed for teaching staff. Enter only Q.No, Unit, Sub-Unit, K-Level, CO, Section, Marks and Question.</p>
         </div>
       </div>
       <span class="text-[10px] font-bold text-indigo-800 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200 self-start sm:self-auto">DOCX • XLSX • CSV</span>
