@@ -361,10 +361,13 @@ function qps_question_defaults(array $q, int $number): array {
         else $kLevel = 'K1';
     }
 
-    // Course Outcome CO level (Always strictly mapped to K-Level)
-    $kNum = preg_replace('/[^0-9]/', '', $kLevel);
-    $coNum = ($kNum !== '') ? $kNum : '1';
-    $coLevel = 'CO' . max(1, (int)$coNum);
+    // Preserve an explicit CO supplied by staff/source. Only legacy rows with
+    // no usable CO may use the historical K->CO fallback.
+    $coLevel = strtoupper(trim((string)($q['co_level'] ?? $q['co'] ?? '')));
+    if ($coLevel === '' || !preg_match('/^CO[1-9][0-9]*$/', $coLevel)) {
+        $kNum = preg_replace('/[^0-9]/', '', $kLevel);
+        $coLevel = 'CO' . max(1, (int)($kNum !== '' ? $kNum : 1));
+    }
 
     // Marks
     $marks = (int)($q['marks'] ?? $q['mark'] ?? 0);
@@ -422,8 +425,11 @@ function qps_rows_to_questions(array $rows): array {
         $unit = qps_header_pick($r, ['unit_no', 'unit', 'alagu', 'इकाई', 'यूनिट', 'அலகு', 'unite', 'module'], '');
         $subUnit = qps_header_pick($r, ['sub_unit', 'subunit', 'sub_topic', 'subtopic', 'sub', 'उप-इकाई', 'उप इकाई'], '');
         $kLevel = qps_header_pick($r, ['k_level', 'klevel', 'bloom', 'bloom_level', 'cognitive_level', 'के-स्तर', 'के स्तर'], '');
-        $marks = qps_header_pick($r, ['marks', 'mark', 'total_marks', 'अंक', 'मूल्यांकन अंक', 'மதிப்பெண்'], '1');
-        $sec = qps_header_pick($r, ['section_type', 'section', 'part', 'सेक्शन', 'खंड', 'भाग', 'பகுதி'], '');
+        $marks = qps_header_pick($r, ['marks', 'mark', 'total_marks', 'अंक', 'மதிப்பெண்'], '');
+        $sec = qps_header_pick($r, ['section_type', 'section', 'part', 'सेक्शन', 'खंड', 'பகுதி'], '');
+        $coLevel = qps_header_pick($r, ['co_level', 'co', 'course_outcome', 'course outcome', 'CO', 'CO-Level'], '');
+        $qNoRaw = qps_header_pick($r, ['q_no', 'qno', 'question_no', 'question_number', 'question number', 'Q.No', 'வினா எண்', 'प्रश्न सं.'], '');
+        $qNo = (int)$qNoRaw;
         $answer = qps_header_pick($r, ['answer_key', 'answer', 'key', 'ans', 'solution', 'उत्तर कुंजी', 'उत्तर', 'कुंजी', 'விடை'], '');
         $imageUrl = qps_header_pick($r, ['image_url', 'image', 'img', 'photo'], '');
 
@@ -432,13 +438,15 @@ function qps_rows_to_questions(array $rows): array {
             'unit_no' => (int)$unit,
             'sub_unit' => $subUnit,
             'k_level' => $kLevel,
-            'marks' => (int)$marks,
+            'co_level' => $coLevel,
+            'marks' => $marks === '' ? 0 : (int)$marks,
             'section_type' => $sec,
             'answer_key' => $answer,
             'image_url' => $imageUrl
         ];
 
-        $out[] = qps_question_defaults($rowDict, $num++);
+        $out[] = qps_question_defaults($rowDict, $qNo > 0 ? $qNo : $num);
+        $num++;
     }
 
     return $out;
