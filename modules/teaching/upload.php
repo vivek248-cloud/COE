@@ -130,7 +130,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
         </div>
         <h2 class="text-xl sm:text-2xl font-extrabold mt-2.5 tracking-tight">Question Bank Repository & Smart OBE Verification</h2>
         <p class="text-stone-300 text-xs mt-1.5 max-w-3xl leading-relaxed">
-          Upload Word (DOCX), PDF, Excel (XLSX), or CSV question banks using the staff-simple format. Staff only need to provide Question Number, Section, Marks, K-Level, CO and Question. The importer detects question type and extracts MCQ options when possible.
+          Upload Word (DOCX), PDF, Excel (XLSX), or CSV question banks using the staff-simple format. Staff provide Question Number, Unit, Sub-Unit, K-Level, CO, Section, Marks and Question. The importer detects question type and extracts MCQ options when possible.
         </p>
       </div>
       <div class="flex items-center gap-2.5">
@@ -615,13 +615,13 @@ require_once __DIR__ . '/../../includes/navbar.php';
       <table class="w-full text-left text-xs border-collapse">
         <thead class="bg-stone-900 text-stone-200 uppercase font-black text-[10px] tracking-wider">
           <tr>
-            <th class="p-3 text-center w-12">#</th>
-            <th class="p-3 text-center w-24">Unit</th>
+            <th class="p-3 text-center w-16">Q.No</th>
+            <th class="p-3 text-center w-20">Unit</th>
             <th class="p-3 text-center w-24">Sub-Unit</th>
-            <th class="p-3 text-center w-24">Marks</th>
             <th class="p-3 text-center w-28">K-Level</th>
-            <th class="p-3 text-center w-20">CO-Level</th>
-            <th class="p-3 text-center w-32">Section</th>
+            <th class="p-3 text-center w-20">CO</th>
+            <th class="p-3 text-center w-28">Section</th>
+            <th class="p-3 text-center w-20">Marks</th>
             <th class="p-3">Question Text & Answer Key</th>
             <th class="p-3 text-center w-20">Action</th>
           </tr>
@@ -1096,11 +1096,7 @@ async function uploadAndParseFile(file) {
 
     // Append new questions to existing question list (for 250+ banks)
     if (extractedQuestions.length > 0) {
-      const startNum = extractedQuestions.length + 1;
-      data.questions.forEach((q, idx) => {
-        q.q_number = startNum + idx;
-        extractedQuestions.push(q);
-      });
+      data.questions.forEach((q) => extractedQuestions.push(q));
     } else {
       extractedQuestions = data.questions || [];
     }
@@ -1230,104 +1226,85 @@ function renderPreview() {
     const tr = document.createElement('tr');
     tr.className = `hover:bg-stone-50/80 align-top transition border-b border-stone-100 ${isDup ? 'bg-amber-50/40' : ''}`;
     tr.innerHTML = `
-      <td class="p-3 text-center font-black font-mono text-indigo-900 bg-stone-50/50">
-        ${i + 1}
+      <td class="p-2 text-center">
+        <input type="number" min="1" value="${esc(q.q_number ?? i + 1)}"
+          onchange="extractedQuestions[${i}].q_number=parseInt(this.value)||(${i}+1);"
+          class="w-full border border-stone-300 rounded-xl p-2 text-center font-black font-mono text-indigo-900 bg-stone-50">
         ${isDup ? `<span class="block text-[9px] font-black bg-amber-400 text-slate-950 px-1 py-0.5 rounded-full mt-1" title="Duplicate">DUP</span>` : ''}
       </td>
-      
-      <!-- Unit Selector (1..5) -->
+
       <td class="p-2">
-        <select onchange="extractedQuestions[${i}].unit_no=parseInt(this.value);" class="w-full border border-stone-300 rounded-2xl p-2 font-bold text-center text-xs bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm">
-          <option value="1" ${q.unit_no==1?'selected':''}>Unit 1</option>
-          <option value="2" ${q.unit_no==2?'selected':''}>Unit 2</option>
-          <option value="3" ${q.unit_no==3?'selected':''}>Unit 3</option>
-          <option value="4" ${q.unit_no==4?'selected':''}>Unit 4</option>
-          <option value="5" ${q.unit_no==5?'selected':''}>Unit 5</option>
+        <select onchange="extractedQuestions[${i}].unit_no=parseInt(this.value);"
+          class="w-full border border-stone-300 rounded-xl p-2 font-bold text-center text-xs bg-white">
+          <option value="1" ${q.unit_no==1?'selected':''}>1</option>
+          <option value="2" ${q.unit_no==2?'selected':''}>2</option>
+          <option value="3" ${q.unit_no==3?'selected':''}>3</option>
+          <option value="4" ${q.unit_no==4?'selected':''}>4</option>
+          <option value="5" ${q.unit_no==5?'selected':''}>5</option>
         </select>
       </td>
 
-      <!-- Sub-Unit (e.g. 1.1, 1.2, 2.1) -->
       <td class="p-2">
-        <input type="text" value="${esc(q.sub_unit || (q.unit_no + '.1'))}" onchange="extractedQuestions[${i}].sub_unit=this.value;" placeholder="e.g. 1.1" class="w-full border border-stone-300 rounded-2xl p-2 text-center font-mono font-bold text-xs bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm">
+        <input type="text" value="${esc(q.sub_unit || '')}"
+          onchange="extractedQuestions[${i}].sub_unit=this.value;"
+          placeholder="1.1"
+          class="w-full border border-stone-300 rounded-xl p-2 text-center font-mono font-bold text-xs bg-white">
       </td>
 
-      <!-- Marks -->
       <td class="p-2">
-        <input type="number" min="1" max="50" value="${esc(q.marks || 1)}" onchange="extractedQuestions[${i}].marks=parseInt(this.value);" class="w-full border border-stone-300 rounded-2xl p-2 text-center font-black text-amber-900 text-xs bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm">
-      </td>
-
-      <!-- K-Level (Bloom's Taxonomy) -->
-      <td class="p-2">
-        <select onchange="extractedQuestions[${i}].k_level=this.value; extractedQuestions[${i}].co_level='CO'+this.value.replace('K',''); renderPreview();" class="w-full border border-stone-300 rounded-2xl p-2 font-bold text-blue-900 text-xs bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm">
-          <option value="K1" ${q.k_level==='K1'?'selected':''}>K1 - Remembering</option>
-          <option value="K2" ${q.k_level==='K2'?'selected':''}>K2 - Understanding</option>
-          <option value="K3" ${q.k_level==='K3'?'selected':''}>K3 - Applying</option>
-          <option value="K4" ${q.k_level==='K4'?'selected':''}>K4 - Analyzing</option>
-          <option value="K5" ${q.k_level==='K5'?'selected':''}>K5 - Evaluating</option>
-          <option value="K6" ${q.k_level==='K6'?'selected':''}>K6 - Creating</option>
+        <select onchange="extractedQuestions[${i}].k_level=this.value;"
+          class="w-full border border-stone-300 rounded-xl p-2 font-bold text-blue-900 text-xs bg-white">
+          <option value="K1" ${q.k_level==='K1'?'selected':''}>K1</option>
+          <option value="K2" ${q.k_level==='K2'?'selected':''}>K2</option>
+          <option value="K3" ${q.k_level==='K3'?'selected':''}>K3</option>
+          <option value="K4" ${q.k_level==='K4'?'selected':''}>K4</option>
+          <option value="K5" ${q.k_level==='K5'?'selected':''}>K5</option>
+          <option value="K6" ${q.k_level==='K6'?'selected':''}>K6</option>
         </select>
       </td>
 
-      <!-- CO-Level (Identical to K-Level) -->
-      <td class="p-2 text-center">
-        <span class="inline-block bg-emerald-50 text-emerald-800 font-mono font-black text-xs px-2.5 py-1.5 rounded-xl border border-emerald-200 shadow-xs">
-          ${esc(q.co_level || ('CO' + (q.k_level || 'K1').replace('K','')))}
-        </span>
+      <td class="p-2">
+        <input type="text" value="${esc(q.co_level || '')}"
+          onchange="extractedQuestions[${i}].co_level=this.value.trim().toUpperCase();"
+          placeholder="CO1"
+          class="w-full border border-stone-300 rounded-xl p-2 text-center font-mono font-black text-emerald-800 bg-white">
       </td>
 
-      <!-- Section -->
       <td class="p-2">
-        <select onchange="extractedQuestions[${i}].section_type=this.value" class="w-full border border-stone-300 rounded-2xl p-2 font-bold text-slate-800 text-xs bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm">
-          <option value="SECTION-A" ${q.section_type==='SECTION-A'||q.section_type==='Section A'?'selected':''}>SECTION-A (1M)</option>
-          <option value="SECTION-B" ${q.section_type==='SECTION-B'||q.section_type==='Section B'?'selected':''}>SECTION-B (5M)</option>
-          <option value="SECTION-C" ${q.section_type==='SECTION-C'||q.section_type==='Section C'?'selected':''}>SECTION-C (10M)</option>
-          <option value="SECTION-D" ${q.section_type==='SECTION-D'||q.section_type==='Section D'?'selected':''}>SECTION-D (10M Comp)</option>
+        <select onchange="extractedQuestions[${i}].section_type=this.value;"
+          class="w-full border border-stone-300 rounded-xl p-2 font-bold text-slate-800 text-xs bg-white">
+          <option value="SECTION-A" ${q.section_type==='SECTION-A'||q.section_type==='Section A'||q.section_type==='A'?'selected':''}>A</option>
+          <option value="SECTION-B" ${q.section_type==='SECTION-B'||q.section_type==='Section B'||q.section_type==='B'?'selected':''}>B</option>
+          <option value="SECTION-C" ${q.section_type==='SECTION-C'||q.section_type==='Section C'||q.section_type==='C'?'selected':''}>C</option>
+          <option value="SECTION-D" ${q.section_type==='SECTION-D'||q.section_type==='Section D'||q.section_type==='D'?'selected':''}>D</option>
         </select>
       </td>
 
-      <!-- Question Text & Answer Key -->
-      <td class="p-3 space-y-2">
-        <textarea rows="2" onchange="extractedQuestions[${i}].question_text=this.value;" class="question-textarea w-full border border-stone-300 rounded-2xl p-2.5 font-sans leading-relaxed text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm bg-stone-50/50 focus:bg-white transition" placeholder="Enter question description, options, formula...">${esc(q.question_text)}</textarea>
-        
-        <!-- Answer Key Input Block -->
+      <td class="p-2">
+        <input type="number" min="0" max="100" value="${esc(q.marks ?? '')}"
+          onchange="extractedQuestions[${i}].marks=this.value===''?'':parseInt(this.value);"
+          placeholder="Marks"
+          class="w-full border border-stone-300 rounded-xl p-2 text-center font-black text-amber-900 text-xs bg-white">
+      </td>
+
+      <td class="p-3 space-y-2 min-w-[360px]">
+        <textarea rows="3" onchange="extractedQuestions[${i}].question_text=this.value;"
+          class="question-textarea w-full border border-stone-300 rounded-xl p-2.5 font-sans leading-relaxed text-xs bg-stone-50/50 focus:bg-white"
+          placeholder="Enter complete question. For MCQ, include (a), (b), (c), (d).">${esc(q.question_text)}</textarea>
         <div class="flex items-center gap-2 bg-emerald-50/60 p-2 rounded-xl border border-emerald-200">
-          <span class="bg-emerald-600 text-white font-black text-[10px] px-2 py-0.5 rounded-lg shrink-0">KEY</span>
-          <input type="text" value="${esc(q.answer_key || '')}" onchange="extractedQuestions[${i}].answer_key=this.value; renderPreview();" placeholder="Enter solution or correct answer key (e.g. Option (a) / Explanation)..." class="w-full bg-white border border-emerald-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-emerald-950 focus:ring-2 focus:ring-emerald-500">
+          <span class="bg-emerald-600 text-white font-black text-[10px] px-2 py-0.5 rounded-lg">KEY</span>
+          <input type="text" value="${esc(q.answer_key || '')}"
+            onchange="extractedQuestions[${i}].answer_key=this.value;"
+            placeholder="Optional answer key"
+            class="w-full bg-white border border-emerald-300 rounded-xl px-2.5 py-1 text-xs">
         </div>
-
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div class="flex items-center space-x-2">
-            <button type="button" onclick="triggerImageUpload(${i})" class="bg-stone-100 hover:bg-stone-200 text-stone-900 border border-stone-300 px-3 py-1 rounded-full text-[10px] font-bold flex items-center space-x-1 shadow-xs transition">
-              <i data-lucide="image-plus" class="w-3 h-3 text-indigo-600"></i>
-              <span>${q.image_url ? 'Replace Diagram' : '+ Add Diagram'}</span>
-            </button>
-            ${q.image_url ? `<button type="button" onclick="removeQuestionImage(${i})" class="text-rose-600 hover:underline text-[10px] font-bold">Remove Image</button>` : ''}
-          </div>
-          
-          ${isDup ? `
-            <div class="flex items-center space-x-1">
-              <span class="text-[10px] font-black text-amber-900">Action:</span>
-              <select onchange="extractedQuestions[${i}].replace_action=this.value;" class="border border-amber-300 rounded-xl p-1 bg-amber-100 text-[10px] font-bold">
-                <option value="replace" ${q.replace_action==='replace'?'selected':''}>Replace Existing</option>
-                <option value="append" ${q.replace_action==='append'?'selected':''}>Append as New</option>
-                <option value="skip" ${q.replace_action==='skip'?'selected':''}>Skip Duplicate</option>
-              </select>
-            </div>
-          ` : ''}
-        </div>
-
-        ${q.image_url ? `
-          <div class="mt-2 bg-stone-50 p-2 rounded-xl border border-stone-200 inline-block shadow-xs">
-            <img src="${esc(q.image_url)}" class="max-h-24 rounded-lg border border-stone-300 object-contain">
-          </div>
-        ` : ''}
+        ${q.image_url ? `<div class="bg-stone-50 p-2 rounded-xl border"><img src="${esc(q.image_url)}" class="max-h-24 rounded-lg object-contain"></div>` : ''}
       </td>
 
-      <!-- Action -->
-      <td class="p-3 text-center align-middle">
-        <button type="button" onclick="removeQuestion(${i})" class="bg-rose-50 hover:bg-rose-100 text-rose-700 w-8 h-8 rounded-full font-bold flex items-center justify-center mx-auto border border-rose-200 shadow-xs transition" title="Delete Question">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-        </button>
+      <td class="p-3 text-center">
+        <button type="button" onclick="removeQuestion(${i})"
+          class="bg-rose-50 hover:bg-rose-100 text-rose-700 w-8 h-8 rounded-full font-bold flex items-center justify-center mx-auto border border-rose-200"
+          title="Delete Question"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
       </td>
     `;
     body.appendChild(tr);
@@ -1353,7 +1330,7 @@ function addNewManualQuestion() {
     sub_unit: `${unit}.1`,
     marks: 1,
     k_level: 'K1',
-    co_level: 'CO1',
+    co_level: '',
     section_type: 'SECTION-A',
     question_text: '',
     answer_key: '',
