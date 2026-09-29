@@ -305,6 +305,83 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )");
 
+            // v4 provenance tables are additive and keep ERP master tables untouched.
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `qps_imports` (
+                `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                `bank_id` int DEFAULT NULL,
+                `token_hash` char(64) DEFAULT NULL,
+                `source_file_name` varchar(255) NOT NULL,
+                `source_format` varchar(30) NOT NULL,
+                `file_size_bytes` bigint unsigned NOT NULL DEFAULT 0,
+                `parser_version` varchar(80) NOT NULL,
+                `schema_version` varchar(20) NOT NULL DEFAULT '4.0',
+                `detected_language` varchar(20) DEFAULT NULL,
+                `ocr_used` tinyint(1) NOT NULL DEFAULT 0,
+                `total_questions` int unsigned NOT NULL DEFAULT 0,
+                `duplicate_questions` int unsigned NOT NULL DEFAULT 0,
+                `warning_count` int unsigned NOT NULL DEFAULT 0,
+                `low_confidence_count` int unsigned NOT NULL DEFAULT 0,
+                `status` varchar(30) NOT NULL DEFAULT 'UPLOADED',
+                `diagnostics_json` longtext,
+                `created_by` varchar(100) DEFAULT NULL,
+                `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                `completed_at` timestamp NULL DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_qps_import_bank` (`bank_id`,`created_at`),
+                KEY `idx_qps_import_staff` (`created_by`,`created_at`),
+                KEY `idx_qps_import_hash` (`token_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `qps_import_rows` (
+                `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                `import_id` bigint unsigned NOT NULL,
+                `row_no` int unsigned NOT NULL,
+                `source_q_number` int DEFAULT NULL,
+                `question_hash` char(64) DEFAULT NULL,
+                `validation_status` varchar(30) NOT NULL DEFAULT 'VALID',
+                `duplicate_type` varchar(40) DEFAULT NULL,
+                `matched_question_id` int DEFAULT NULL,
+                `diagnostics_json` longtext,
+                `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `uq_qps_import_row` (`import_id`,`row_no`),
+                KEY `idx_qps_ir_hash` (`question_hash`),
+                KEY `idx_qps_ir_match` (`matched_question_id`),
+                CONSTRAINT `fk_qps_ir_import` FOREIGN KEY (`import_id`) REFERENCES `qps_imports` (`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `qps_question_history` (
+                `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                `question_id` int NOT NULL,
+                `bank_id` int NOT NULL,
+                `version_no` int NOT NULL DEFAULT 1,
+                `action` varchar(20) NOT NULL,
+                `snapshot_json` longtext NOT NULL,
+                `changed_by` varchar(100) DEFAULT NULL,
+                `changed_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_qps_qh_question` (`question_id`,`changed_at`),
+                KEY `idx_qps_qh_bank` (`bank_id`,`changed_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `qps_question_usage` (
+                `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+                `question_id` int NOT NULL,
+                `bank_id` int DEFAULT NULL,
+                `generated_paper_id` int DEFAULT NULL,
+                `paper_code` varchar(120) DEFAULT NULL,
+                `academic_year` varchar(30) DEFAULT NULL,
+                `semester` varchar(50) DEFAULT NULL,
+                `exam_type` varchar(100) DEFAULT NULL,
+                `usage_role` varchar(30) NOT NULL DEFAULT 'GENERATED',
+                `used_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                `used_by` varchar(100) DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_qps_qu_question` (`question_id`,`used_at`),
+                KEY `idx_qps_qu_context` (`paper_code`,`academic_year`,`semester`),
+                KEY `idx_qps_qu_year` (`academic_year`,`used_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
             // Create question_usage_history table
             $pdo->exec("CREATE TABLE IF NOT EXISTS question_usage_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -418,7 +495,17 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 'reviewed_at' => 'DATETIME NULL',
                 'blueprint_id' => 'INT NULL',
                 'school_name' => 'VARCHAR(255) NULL',
-                'part_type' => 'VARCHAR(50) NULL'
+                'part_type' => 'VARCHAR(50) NULL',
+                'schema_version' => "VARCHAR(20) DEFAULT '4.0'",
+                'current_version_id' => 'BIGINT NULL',
+                'last_import_id' => 'BIGINT NULL',
+                'source_question_no' => 'INT NULL',
+                'import_schema' => "VARCHAR(30) DEFAULT 'legacy'",
+                'parser_version' => 'VARCHAR(80) NULL',
+                'parser_confidence' => 'DECIMAL(5,4) DEFAULT 1.0000',
+                'validation_status' => "VARCHAR(30) DEFAULT 'VALID'",
+                'normalized_text' => 'LONGTEXT NULL',
+                'question_hash' => 'CHAR(64) NULL'
             ];
 
             foreach ($needed as $c => $defn) {
