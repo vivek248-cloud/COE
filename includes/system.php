@@ -258,6 +258,18 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 if (!isset($qCols['options_json'])) $pdo->exec("ALTER TABLE questions ADD COLUMN options_json TEXT DEFAULT NULL");
                 if (!isset($qCols['answer_key'])) $pdo->exec("ALTER TABLE questions ADD COLUMN answer_key TEXT DEFAULT NULL");
                 if (!isset($qCols['language'])) $pdo->exec("ALTER TABLE questions ADD COLUMN language TEXT DEFAULT 'en'");
+                $qNeeded = [
+                    'source_question_no' => 'INTEGER DEFAULT NULL',
+                    'import_schema' => "TEXT DEFAULT 'legacy'",
+                    'parser_version' => 'TEXT DEFAULT NULL',
+                    'parser_confidence' => 'REAL DEFAULT 1.0',
+                    'validation_status' => "TEXT DEFAULT 'VALID'",
+                    'normalized_text' => 'TEXT DEFAULT NULL',
+                    'question_hash' => 'TEXT DEFAULT NULL'
+                ];
+                foreach ($qNeeded as $qc => $qd) {
+                    if (!isset($qCols[$qc])) $pdo->exec("ALTER TABLE questions ADD COLUMN $qc $qd");
+                }
             } catch (Exception $e) {}
 
             $needed = [
@@ -397,6 +409,20 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 if (!in_array('options_json', $qCols, true)) $pdo->exec("ALTER TABLE `questions` ADD COLUMN `options_json` LONGTEXT NULL");
                 if (!in_array('answer_key', $qCols, true)) $pdo->exec("ALTER TABLE `questions` ADD COLUMN `answer_key` TEXT NULL");
                 if (!in_array('language', $qCols, true)) $pdo->exec("ALTER TABLE `questions` ADD COLUMN `language` VARCHAR(20) DEFAULT 'en'");
+                $qNeeded = [
+                    'source_question_no' => 'INT NULL',
+                    'import_schema' => "VARCHAR(30) DEFAULT 'legacy'",
+                    'parser_version' => 'VARCHAR(80) NULL',
+                    'parser_confidence' => 'DECIMAL(5,4) DEFAULT 1.0000',
+                    'validation_status' => "VARCHAR(30) DEFAULT 'VALID'",
+                    'normalized_text' => 'LONGTEXT NULL',
+                    'question_hash' => 'CHAR(64) NULL'
+                ];
+                foreach ($qNeeded as $qc => $qd) {
+                    if (!in_array(strtolower($qc), $qCols, true)) {
+                        $pdo->exec("ALTER TABLE `questions` ADD COLUMN `{$qc}` {$qd}");
+                    }
+                }
             } catch (Exception $e) {}
 
             $needed = [
@@ -422,13 +448,6 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 'schema_version' => "VARCHAR(20) DEFAULT '4.0'",
                 'current_version_id' => 'BIGINT NULL',
                 'last_import_id' => 'BIGINT NULL',
-                'source_question_no' => 'INT NULL',
-                'import_schema' => "VARCHAR(30) DEFAULT 'legacy'",
-                'parser_version' => 'VARCHAR(80) NULL',
-                'parser_confidence' => 'DECIMAL(5,4) DEFAULT 1.0000',
-                'validation_status' => "VARCHAR(30) DEFAULT 'VALID'",
-                'normalized_text' => 'LONGTEXT NULL',
-                'question_hash' => 'CHAR(64) NULL'
             ];
 
             foreach ($needed as $c => $defn) {
