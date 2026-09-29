@@ -569,71 +569,253 @@ function qps_dom_children_text(DOMNode $node): string {
 /**
  * Robust DOCX Parser extracting questions, units, sub-units, answer keys, and options
  */
-function qps_docx_parse(string $path, array $sectionMarks = []): array {
-    // 1. Try powerful python-docx extractor first
-    $pyScript = __DIR__ . '/docx_extractor.py';
-    if (file_exists($pyScript)) {
-        $output = []; $ret = -1;
-        $marksArg = escapeshellarg(json_encode($sectionMarks, JSON_UNESCAPED_UNICODE));
-        // Windows/XAMPP commonly has the Python launcher (py.exe) even when
-        // the Microsoft Store "python" alias is broken. Prefer an explicit
-        // QPS_PYTHON override, then try the launcher and common executables.
-        $configuredPython = trim((string)(getenv('QPS_PYTHON') ?: ''));
-        $pythonCandidates = [];
-        if ($configuredPython !== '') {
-            $pythonCandidates[] = $configuredPython;
-        }
-        $pythonCandidates = array_merge($pythonCandidates, [
-            'py -3',
-            'python',
-            'python3',
-            'C:\\Python312\\python.exe',
-            'C:\\Python311\\python.exe',
-            'C:\\Python310\\python.exe',
-            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python312\\python.exe' : '',
-            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python311\\python.exe' : '',
-            getenv('LOCALAPPDATA') ? getenv('LOCALAPPDATA') . '\\Programs\\Python\\Python310\\python.exe' : ''
-        ]);
-        $pythonCandidates = array_values(array_unique(array_filter($pythonCandidates, static function($v) {
-            return trim((string)$v) !== '';
-        })));
+function qps_docx_extract_blocks_php(string $path): array {
+    if (!class_exists('ZipArchive') || !class_exists('DOMDocument')) {
+        throw new RuntimeException('PHP DOCX support requires ZipArchive and DOM/XML extensions.');
+    }
 
-        $pythonTried = [];
-        foreach ($pythonCandidates as $py) {
-            $output = []; $ret = -1;
-            $pythonTried[] = $py;
-            $cmd = $py . ' ' . escapeshellarg($pyScript) . ' ' . escapeshellarg($path) . ' --section_marks ' . $marksArg;
-            @exec($cmd . ' 2>&1', $output, $ret);
-            if ($ret === 0 && !empty($output)) {
-                $jsonStr = implode("\n", $output);
-                $parsed = json_decode($jsonStr, true);
-                if (is_array($parsed) && !empty($parsed['success']) && !empty($parsed['questions'])) {
-                    return $parsed['questions'];
+    $zip = new ZipArchive();
+    if ($zip->open($path) !== true) throw new RuntimeException('Unable to open DOCX package.');
+
+    $xml = $zip->getFromName('word/document.xml');
+    if ($xml === false) {
+        $zip->close();
+        throw new RuntimeException('DOCX document.xml not found.');
+    }
+
+    $rels = [];
+    $relsXml = $zip->getFromName('word/_rels/document.xml.rels');
+    if ($relsXml !== false) {
+        $rdom = new DOMDocument();
+        @$rdom->loadXML($relsXml, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+        if ($rdom->documentElement) {
+            foreach ($rdom->documentElement->childNodes as $r) {
+                if ($r->nodeType === XML_ELEMENT_NODE && $r->localName === 'Relationship') {
+                    $id = $r->getAttribute('Id');
+                    $target = $r->getAttribute('Target');
+                    if ($id !== '' && $target !== '') $rels[$id] = $target;
                 }
             }
         }
-        if ($ret === 0 && !empty($output)) {
-            $jsonStr = implode("\n", $output);
-            $parsed = json_decode($jsonStr, true);
-            if (is_array($parsed) && !empty($parsed['success']) && !empty($parsed['questions'])) {
-                return $parsed['questions'];
+    }
+
+    $dom = new DOMDocument();
+    if (!@$dom->loadXML($xml, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)) {
+        $zip->close();
+        throw new RuntimeException('Invalid DOCX XML.');
+    }
+
+    $W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    $A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+    $R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    $blocks = [];
+    $body = $dom->getElementsByTagNameNS($W, 'body')->item(0);
+    if (!$body) { $zip->close(); return []; }
+
+    foreach ($body->childNodes as $node) {
+        if ($node->nodeType !== XML_ELEMENT_NODE) continue;
+
+        if ($node->localName === 'p') {
+            $text = '';
+            $images = [];
+            foreach ($node->getElementsByTagNameNS($W, 't') as $t) $text .= $t->textContent;
+            foreach ($node->getElementsByTagNameNS($W, 'tab') as $tab) $text .= "\t";
+            foreach ($node->getElementsByTagNameNS($W, 'br') as $br) $text .= "\n";
+
+            foreach ($node->getElementsByTagNameNS($A, 'blip') as $blip) {
+                $rid = $blip->getAttributeNS($R, 'embed');
+                if (!isset($rels[$rid])) continue;
+                $target = ltrim($rels[$rid], '/');
+                if (strpos($target, 'word/') !== 0) $target = 'word/' . $target;
+                $bytes = $zip->getFromName($target);
+                if ($bytes === false || strlen($bytes) > 3145728) continue;
+                $ext = strtolower(pathinfo($target, PATHINFO_EXTENSION));
+                $mime = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif','webp'=>'image/webp','bmp'=>'image/bmp'][$ext] ?? 'application/octet-stream';
+                $images[] = 'data:' . $mime . ';base64,' . base64_encode($bytes);
+            }
+
+            $text = qps_normalize_space($text);
+            if ($text !== '' || $images) $blocks[] = ['text'=>$text,'image_url'=>$images[0] ?? ''];
+        } elseif ($node->localName === 'tbl') {
+            foreach ($node->getElementsByTagNameNS($W, 'tr') as $tr) {
+                $cells = [];
+                foreach ($tr->getElementsByTagNameNS($W, 'tc') as $tc) {
+                    $cell = '';
+                    foreach ($tc->getElementsByTagNameNS($W, 't') as $t) $cell .= $t->textContent;
+                    $cells[] = qps_normalize_space($cell);
+                }
+                $row = trim(implode(" | ", array_filter($cells, static fn($v) => $v !== '')));
+                if ($row !== '') $blocks[] = ['text'=>$row,'image_url'=>''];
             }
         }
     }
+    $zip->close();
+    return $blocks;
+}
 
-    // The structure-aware Python parser is the canonical DOCX parser.
-    // Do not silently fall back to the old generic paragraph parser: that path can
-    // flatten Match/Assertion/Passage blocks and create false questions.
-    // If Python/python-docx is not installed, keep the upload functional by
-    // using the existing PHP DOCX parser. Set QPS_DISABLE_LEGACY_DOCX_FALLBACK=1
-    // in production when Python is guaranteed to be installed.
-    if (getenv('QPS_DISABLE_LEGACY_DOCX_FALLBACK') === '1') {
-        $details = !empty($output) ? implode("\n", array_slice($output, -8)) : 'Python extractor was unavailable or returned no valid JSON.';
-        throw new RuntimeException(
-            'DOCX structure-aware extractor is unavailable. Install Python 3 + python-docx/lxml or set QPS_PYTHON to python.exe. Tried: '
-            . implode(', ', $pythonTried ?? []) . '. Details: ' . $details
-        );
+/**
+ * Parse the official v4 staff-simple DOCX format.
+ * Required fields are explicit and authoritative:
+ * Q.No, Unit, Sub-Unit, K-Level, CO, Section, Marks, Question.
+ * No K->CO or question-number inference is performed for a v4 block.
+ */
+function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array {
+    $labelMap = [
+        'Q.NO'=>'q_number','Q NO'=>'q_number','QUESTION NO'=>'q_number','QUESTION NUMBER'=>'q_number',
+        'UNIT'=>'unit_no','SUB-UNIT'=>'sub_unit','SUB UNIT'=>'sub_unit',
+        'K-LEVEL'=>'k_level','K LEVEL'=>'k_level','BLOOM'=>'k_level','BLOOM LEVEL'=>'k_level',
+        'CO'=>'co_level','COURSE OUTCOME'=>'co_level',
+        'SECTION'=>'section_type','PART'=>'section_type',
+        'MARKS'=>'marks','MARK'=>'marks',
+        'QUESTION'=>'question_text','QUESTION TEXT'=>'question_text'
+    ];
+
+    $normalizeLabel = static function(string $label): string {
+        $label = strtoupper(trim(preg_replace('/\\s+/u', ' ', $label)));
+        $label = str_replace(['_', '—', '–', ':'], [' ', '-', '-', ''], $label);
+        return trim($label);
+    };
+
+    $parseField = static function(string $line) use ($normalizeLabel, $labelMap): array {
+        if (preg_match('/^\\s*([A-Z][A-Z0-9 _-]{1,30})\\s*[:：]\\s*(.*)$/u', $line, $m)) {
+            $label = $normalizeLabel($m[1]);
+            if (isset($labelMap[$label])) return [$labelMap[$label], trim($m[2]), true];
+        }
+        return ['', '', false];
+    };
+
+    $hasV4 = false;
+    foreach ($blocks as $b) {
+        $line = trim((string)($b['text'] ?? ''));
+        [$field, $value, $ok] = $parseField($line);
+        if ($ok && in_array($field, ['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'], true)) {
+            $hasV4 = true; break;
+        }
     }
+    if (!$hasV4) return [];
+
+    $rows = [];
+    $current = null;
+    $flush = static function() use (&$rows, &$current) {
+        if (!$current) return;
+        $q = trim((string)($current['question_text'] ?? ''));
+        if ($q === '') {
+            $current['warnings'][] = 'QUESTION field is missing or empty.';
+            $current['parser_confidence'] = 0.25;
+        }
+        $rows[] = $current;
+        $current = null;
+    };
+
+    foreach ($blocks as $block) {
+        $line = trim((string)($block['text'] ?? ''));
+        if ($line === '') continue;
+        [$field, $value, $ok] = $parseField($line);
+
+        // A new Q.No starts a new logical record.
+        if ($ok && $field === 'q_number') {
+            $flush();
+            $current = [
+                'q_number' => (int)$value,
+                'warnings' => [],
+                'parser_confidence' => 1.0,
+                'source_format' => 'docx',
+                'parser_version' => 'php-staff-v4'
+            ];
+            continue;
+        }
+
+        if ($current === null) continue;
+
+        if ($ok) {
+            if ($field === 'question_text') {
+                $current['question_text'] = $value;
+            } elseif ($field === 'unit_no') {
+                $current['unit_no'] = (int)$value;
+            } elseif ($field === 'sub_unit') {
+                $current['sub_unit'] = $value;
+            } elseif ($field === 'k_level') {
+                $current['k_level'] = strtoupper(trim($value));
+            } elseif ($field === 'co_level') {
+                $current['co_level'] = strtoupper(trim($value));
+            } elseif ($field === 'section_type') {
+                $v = strtoupper(trim($value));
+                if (preg_match('/^(?:SECTION[- ]?)?([A-D])$/', $v, $m)) $v = 'SECTION-' . $m[1];
+                $current['section_type'] = $v;
+            } elseif ($field === 'marks') {
+                $current['marks'] = (int)$value;
+            }
+            continue;
+        }
+
+        // Unlabelled lines after QUESTION belong to the question text.
+        if (isset($current['question_text'])) {
+            $current['question_text'] .= "\n" . $line;
+        } else {
+            $current['warnings'][] = 'Unlabelled content appeared before QUESTION.';
+            $current['parser_confidence'] = min((float)$current['parser_confidence'], 0.80);
+        }
+    }
+    $flush();
+
+    $out = [];
+    foreach ($rows as $idx => $q) {
+        $missing = [];
+        foreach (['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'] as $f) {
+            if (!isset($q[$f]) || trim((string)$q[$f]) === '') $missing[] = $f;
+        }
+        if ($missing) {
+            $q['warnings'][] = 'Missing required fields: ' . implode(', ', $missing);
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.40);
+        }
+
+        if (!isset($q['unit_no']) || $q['unit_no'] < 1 || $q['unit_no'] > 5) {
+            $q['warnings'][] = 'Unit must be 1-5.';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.40);
+        }
+        if (isset($q['sub_unit']) && !preg_match('/^[1-5]\\.[1-5]$/', (string)$q['sub_unit'])) {
+            $q['warnings'][] = 'Sub-Unit should use n.n format.';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
+        }
+        if (isset($q['k_level']) && !preg_match('/^K[1-6]$/', (string)$q['k_level'])) {
+            $q['warnings'][] = 'K-Level should use K1-K6.';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
+        }
+        if (isset($q['co_level']) && !preg_match('/^CO[1-9][0-9]*$/', (string)$q['co_level'])) {
+            $q['warnings'][] = 'CO should use CO1, CO2, ...';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
+        }
+        if (isset($q['marks']) && ($q['marks'] < 0 || $q['marks'] > 100)) {
+            $q['warnings'][] = 'Marks should be between 0 and 100.';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.50);
+        }
+
+        $opts = qps_extract_options_from_text((string)($q['question_text'] ?? ''));
+        if ($opts) $q['options'] = $opts;
+        $q['question_text'] = qps_clean_question_text((string)($q['question_text'] ?? ''));
+        $q['language'] = qps_detect_language($q['question_text']);
+        $q['source_question_no'] = (int)($q['q_number'] ?? 0);
+        $q['import_schema'] = 'staff-v4';
+        $out[] = $q;
+    }
+    return $out;
+}
+
+function qps_docx_parse(string $path, array $sectionMarks = []): array {
+    // Production DOCX extraction is PHP-only. PHPWord is used when installed;
+    // the native OOXML path remains the deterministic fallback for XAMPP.
+    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+    if (is_file($autoload)) @require_once $autoload;
+
+    $blocks = qps_docx_extract_blocks_php($path);
+    if (empty($blocks)) throw new RuntimeException('No readable text was found in the DOCX file.');
+
+    $staffRows = qps_parse_staff_docx_v4($blocks, $sectionMarks);
+    if (!empty($staffRows)) return $staffRows;
+
+    // Legacy documents still use the mature PHP state-machine parser.
+    return qps_paras_to_smart_questions($blocks);
+}
 
     // 2. Optional legacy PHP fallback (explicitly enabled for emergency compatibility).
     $zip = qps_zip_entries($path);
