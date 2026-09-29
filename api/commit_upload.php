@@ -102,17 +102,30 @@ try {
         $qText = trim((string)($q['question_text'] ?? ''));
         if ($qText === '') continue;
 
-        $unit = max(1, min(5, (int)($q['unit_no'] ?? 1)));
-        $subUnit = trim((string)($q['sub_unit'] ?? "{$unit}.1"));
-        $kLevel = strtoupper(trim((string)($q['k_level'] ?? 'K1')));
+        $unitRaw = trim((string)($q['unit_no'] ?? ''));
+        $unit = (int)$unitRaw;
+        if ($unit < 1 || $unit > 5) {
+            $suProbe = trim((string)($q['sub_unit'] ?? ''));
+            $unit = (preg_match('/^([1-5])\./', $suProbe, $um) ? (int)$um[1] : 1);
+        }
+        $subUnit = trim((string)($q['sub_unit'] ?? ''));
+        if ($subUnit === '') $subUnit = "{$unit}.1";
+        $kLevel = strtoupper(trim((string)($q['k_level'] ?? '')));
+        if (!preg_match('/^K[1-6]$/', $kLevel)) $kLevel = 'K1';
         $kNum = preg_match('/K([1-6])/i', $kLevel, $km) ? (int)$km[1] : 1;
         $kNorm = 'K' . $kNum;
 
-        // Rule: CO level is ALWAYS identical to K level
-        $coNorm = 'CO' . $kNum;
+        // Explicit staff/source CO is authoritative. Do not derive CO from K-Level.
+        $coNorm = strtoupper(trim((string)($q['co_level'] ?? $q['co'] ?? '')));
+        if (!preg_match('/^CO[1-9][0-9]*$/', $coNorm)) {
+            $coNorm = '';
+        }
 
-        $marks = max(1, min(100, (int)($q['marks'] ?? 1)));
-        $sec = trim((string)($q['section_type'] ?? 'SECTION-A'));
+        $marksRaw = trim((string)($q['marks'] ?? ''));
+        $marks = $marksRaw === '' ? 0 : (int)$marksRaw;
+        if ($marks < 0 || $marks > 100) $marks = 0;
+        $sec = strtoupper(trim((string)($q['section_type'] ?? $q['section'] ?? '')));
+        if ($sec !== '' && preg_match('/^([A-D])$/', $sec, $sm)) $sec = 'SECTION-' . $sm[1];
         $ansKey = trim((string)($q['answer_key'] ?? ''));
         $optArr = !empty($q['options']) && is_array($q['options']) ? $q['options'] : [];
         $optJson = !empty($optArr) ? json_encode($optArr, JSON_UNESCAPED_UNICODE) : null;
@@ -121,8 +134,10 @@ try {
         $hasFormula = (!empty($q['has_formula']) || strpos($qText, '$') !== false || $formula !== '') ? 1 : 0;
         $lang = trim((string)($q['language'] ?? $bankLanguage));
 
+        $sourceQNo = (int)($q['q_number'] ?? $q['source_q_number'] ?? 0);
+        if ($sourceQNo <= 0) $sourceQNo = $numCounter;
         $item = [
-            'q_number' => $numCounter++,
+            'q_number' => $sourceQNo,
             'unit_no' => $unit,
             'sub_unit' => $subUnit,
             'section_type' => $sec,
@@ -150,6 +165,7 @@ try {
         }
 
         $finalQuestions[] = $item;
+        $numCounter = max($numCounter + 1, $sourceQNo + 1);
     }
 
     if (empty($finalQuestions)) {
