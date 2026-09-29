@@ -291,7 +291,10 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 'reviewed_at' => 'VARCHAR(50) DEFAULT NULL',
                 'blueprint_id' => 'INTEGER DEFAULT NULL',
                 'school_name' => 'VARCHAR(255) DEFAULT NULL',
-                'part_type' => 'VARCHAR(50) DEFAULT NULL'
+                'part_type' => 'VARCHAR(50) DEFAULT NULL',
+                'schema_version' => 'VARCHAR(20) DEFAULT "4.0"',
+                'current_version_id' => 'INTEGER DEFAULT NULL',
+                'last_import_id' => 'INTEGER DEFAULT NULL'
             ];
 
             foreach ($needed as $c => $defn) {
@@ -376,6 +379,28 @@ function qps_ensure_aux_schema(PDO $pdo): void {
                 entity_id VARCHAR(100),
                 details TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+
+            $pdo->exec("CREATE TABLE IF NOT EXISTS qps_imports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bank_id INTEGER DEFAULT NULL,
+                token_hash TEXT DEFAULT NULL,
+                source_file_name TEXT NOT NULL,
+                source_format TEXT NOT NULL,
+                file_size_bytes INTEGER DEFAULT 0,
+                parser_version TEXT NOT NULL,
+                schema_version TEXT DEFAULT '4.0',
+                detected_language TEXT,
+                ocr_used INTEGER DEFAULT 0,
+                total_questions INTEGER DEFAULT 0,
+                duplicate_questions INTEGER DEFAULT 0,
+                warning_count INTEGER DEFAULT 0,
+                low_confidence_count INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'UPLOADED',
+                diagnostics_json TEXT,
+                created_by TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                completed_at DATETIME DEFAULT NULL
             )");
         } else {
             // MySQL / MariaDB
