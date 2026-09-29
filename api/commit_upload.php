@@ -388,7 +388,7 @@ try {
     foreach ($finalQuestions as &$fq) {
         $opts = !empty($fq['options']) && is_array($fq['options']) ? $fq['options'] : [];
         $fq['options_json'] = !empty($opts) ? json_encode($opts, JSON_UNESCAPED_UNICODE) : null;
-        $fq['co_level'] = 'CO' . preg_replace('/\D+/', '', (string)$fq['k_level']);
+        // Explicit CO from the staff/source record is authoritative. Never infer CO from K-Level here.\n        if (!preg_match('/^CO[1-9][0-9]*$/i', (string)($fq['co_level'] ?? ''))) {\n            throw new RuntimeException('Invalid or missing CO for question #' . (int)($fq['q_number'] ?? 0) . '. Please correct the staff template before saving.');\n        }\n        $fq['co_level'] = strtoupper(trim((string)$fq['co_level']));
         if (!empty($fq['id']) && isset($existingById[(int)$fq['id']])) {
             $stQUpd->execute([
                 $fq['q_number'],$fq['unit_no'],$fq['sub_unit'],$fq['section_type'],$fq['question_text'],$fq['marks'],
