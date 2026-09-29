@@ -61,7 +61,6 @@ CREATE TABLE IF NOT EXISTS qps_import_rows (
   matched_question_id INT NULL,
   diagnostics_json LONGTEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY(id),
   UNIQUE KEY uq_qps_import_row(import_id,row_no),
   KEY idx_qps_ir_hash(question_hash),
   KEY idx_qps_ir_match(matched_question_id),
