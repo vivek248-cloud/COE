@@ -230,7 +230,7 @@ try {
     $jsonArchivePath = $hierarchicalDir . '/' . $jsonArchiveName;
 
     $jsonPayload = [
-        'schema_version' => '3.0',
+        'schema_version' => '4.0',
         'institution' => COLLEGE_NAME,
         'metadata' => [
             'staff_code' => $user['staff_code'] ?? 'STAFF',
@@ -248,9 +248,18 @@ try {
             'language' => $bankLanguage,
             'total_questions' => count($finalQuestions),
             'status' => $status,
-            'created_at' => date('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s'),
+            'schema' => [
+                'question_fields' => ['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'],
+                'relational_source_of_truth' => true,
+                'json_role' => 'immutable_reproducibility_snapshot'
+            ]
         ],
-        'questions' => $finalQuestions
+        'questions' => $finalQuestions,
+        'integrity' => [
+            'hash_algorithm' => 'sha256',
+            'content_hash' => null
+        ]
     ];
 
     $jsonRaw = json_encode($jsonPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
