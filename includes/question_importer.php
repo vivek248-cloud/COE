@@ -710,6 +710,39 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
     foreach ($blocks as $block) {
         $line = trim((string)($block['text'] ?? ''));
         if ($line === '') continue;
+        // DOCX templates may use an 8-column table. The native extractor flattens
+        // each table row with | separators, so support that exact canonical shape too.
+        if (substr_count($line, '|') === 7) {
+            $parts = array_map('trim', preg_split('/\\s*\\|\\s*/u', $line, 8));
+            if (count($parts) === 8 && ctype_digit($parts[0]) && preg_match('/^[1-5]$/', $parts[1])
+                && preg_match('/^[1-5]\\.[1-5]$/', $parts[2])
+                && preg_match('/^K[1-6]$/i', $parts[3])
+                && preg_match('/^CO[1-9][0-9]*$/i', $parts[4])
+                && preg_match('/^(?:SECTION[- ]?)?[A-D]$/i', $parts[5])
+                && is_numeric($parts[6]) && $parts[7] !== '') {
+                $flush();
+                $sec = strtoupper($parts[5]);
+                if (preg_match('/^SECTION[- ]?([A-D])$/i', $sec, $sm)) $sec = 'SECTION-' . $sm[1];
+                else $sec = 'SECTION-' . $sec;
+                $current = [
+                    'q_number' => (int)$parts[0],
+                    'unit_no' => (int)$parts[1],
+                    'sub_unit' => $parts[2],
+                    'k_level' => strtoupper($parts[3]),
+                    'co_level' => strtoupper($parts[4]),
+                    'section_type' => $sec,
+                    'marks' => (int)$parts[6],
+                    'question_text' => $parts[7],
+                    'warnings' => [],
+                    'parser_confidence' => 1.0,
+                    'source_format' => 'docx',
+                    'parser_version' => 'php-staff-v4',
+                    'import_schema' => 'staff-v4'
+                ];
+                continue;
+            }
+        }
+
         [$field, $value, $ok] = $parseField($line);
 
         // A new Q.No starts a new logical record.
