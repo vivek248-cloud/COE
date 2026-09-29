@@ -400,12 +400,17 @@ try {
     $stQIns = $pdo->prepare("INSERT INTO questions (
         bank_id, q_number, unit_no, sub_unit, section_type, question_text,
         marks, k_level, co_level, has_formula, formula_latex, image_url,
-        options_json, answer_key, language, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        options_json, answer_key, language, created_at,
+        source_question_no, import_schema, parser_version, parser_confidence,
+        validation_status, normalized_text, question_hash
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stQUpd = $pdo->prepare("UPDATE questions SET
         q_number=?, unit_no=?, sub_unit=?, section_type=?, question_text=?, marks=?,
         k_level=?, co_level=?, has_formula=?, formula_latex=?, image_url=?,
-        options_json=?, answer_key=?, language=? WHERE id=? AND bank_id=?");
+        options_json=?, answer_key=?, language=?,
+        source_question_no=?, import_schema=?, parser_version=?, parser_confidence=?,
+        validation_status=?, normalized_text=?, question_hash=?
+        WHERE id=? AND bank_id=?");
 
     $activeIds=[];
     foreach ($finalQuestions as &$fq) {
@@ -416,14 +421,29 @@ try {
             $stQUpd->execute([
                 $fq['q_number'],$fq['unit_no'],$fq['sub_unit'],$fq['section_type'],$fq['question_text'],$fq['marks'],
                 $fq['k_level'],$fq['co_level'],$fq['has_formula'],$fq['formula_latex'],$fq['image_url'],
-                $fq['options_json'],$fq['answer_key'],$fq['language'],(int)$fq['id'],$bankId
+                $fq['options_json'],$fq['answer_key'],$fq['language'],
+                (int)($fq['source_question_no'] ?? $fq['q_number']),
+                $fq['import_schema'] ?? 'legacy',
+                $fq['parser_version'] ?? 'php-legacy',
+                (float)($fq['parser_confidence'] ?? 1),
+                $fq['validation_status'] ?? 'VALID',
+                $fq['normalized_text'] ?? qps_question_norm((string)$fq['question_text']),
+                $fq['question_hash'] ?? hash('sha256', qps_question_norm((string)$fq['question_text'])),
+                (int)$fq['id'],$bankId
             ]);
             $qId=(int)$fq['id'];
         } else {
             $stQIns->execute([
                 $bankId,$fq['q_number'],$fq['unit_no'],$fq['sub_unit'],$fq['section_type'],$fq['question_text'],
                 $fq['marks'],$fq['k_level'],$fq['co_level'],$fq['has_formula'],$fq['formula_latex'],$fq['image_url'],
-                $fq['options_json'],$fq['answer_key'],$fq['language'],$now
+                $fq['options_json'],$fq['answer_key'],$fq['language'],$now,
+                (int)($fq['source_question_no'] ?? $fq['q_number']),
+                $fq['import_schema'] ?? 'legacy',
+                $fq['parser_version'] ?? 'php-legacy',
+                (float)($fq['parser_confidence'] ?? 1),
+                $fq['validation_status'] ?? 'VALID',
+                $fq['normalized_text'] ?? qps_question_norm((string)$fq['question_text']),
+                $fq['question_hash'] ?? hash('sha256', qps_question_norm((string)$fq['question_text']))
             ]);
             $qId=(int)$pdo->lastInsertId();
             $fq['id']=$qId;
