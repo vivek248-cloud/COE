@@ -12,6 +12,7 @@ $baseUrl = getBaseUrl();
 $currentScript = $_SERVER['SCRIPT_NAME'] ?? '';
 $isCoeAdmin = isCOE();
 $isSuperAdmin = isSuperAdmin();
+$isHod = isHOD();
 
 // Count badges
 $badgeStats = [
