@@ -660,6 +660,18 @@ function qps_docx_extract_blocks_php(string $path): array {
  * No K->CO or question-number inference is performed for a v4 block.
  */
 function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array {
+    /*
+     * Canonical DOCX v4 parser.
+     *
+     * Supports both:
+     *  1) labelled paragraphs: "Q.No: 1", "UNIT: 1", ...
+     *  2) the standard 2-column DOCX template where every logical question is
+     *     stored as FIELD | VALUE rows inside its own table.
+     *
+     * The table format is deliberately parsed as a complete logical record.
+     * This prevents the legacy line parser from treating "1.", "2.", "3.",
+     * etc. inside MATCH questions as separate questions.
+     */
     $labelMap = [
         'Q.NO'=>'q_number','Q NO'=>'q_number','QUESTION NO'=>'q_number','QUESTION NUMBER'=>'q_number',
         'UNIT'=>'unit_no','SUB-UNIT'=>'sub_unit','SUB UNIT'=>'sub_unit',
@@ -667,42 +679,115 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
         'CO'=>'co_level','COURSE OUTCOME'=>'co_level',
         'SECTION'=>'section_type','PART'=>'section_type',
         'MARKS'=>'marks','MARK'=>'marks',
-        'QUESTION'=>'question_text','QUESTION TEXT'=>'question_text'
+        'QUESTION'=>'question_text','QUESTION TEXT'=>'question_text',
+        'QUESTION TYPE'=>'question_type','TYPE'=>'question_type','FORMAT'=>'question_type',
+        'OPTION A'=>'option_a','OPTION_A'=>'option_a',
+        'OPTION B'=>'option_b','OPTION_B'=>'option_b',
+        'OPTION C'=>'option_c','OPTION_C'=>'option_c',
+        'OPTION D'=>'option_d','OPTION_D'=>'option_d',
+        'ANSWER KEY'=>'answer_key','ANSWER_KEY'=>'answer_key','KEY'=>'answer_key',
+        'ASSERTION'=>'assertion','REASON'=>'reason',
+        'MATCH COLUMN A'=>'match_column_a','MATCH_COLUMN_A'=>'match_column_a',
+        'MATCH COLUMN B'=>'match_column_b','MATCH_COLUMN_B'=>'match_column_b',
+        'MATCH OPTIONS'=>'match_options','MATCH_OPTIONS'=>'match_options',
+        'PASSAGE TEXT'=>'passage_text','PASSAGE_TEXT'=>'passage_text',
+        'EITHER OR GROUP'=>'either_or_group','EITHER_OR_GROUP'=>'either_or_group',
+        'COMPULSORY'=>'compulsory',
+        'SOURCE QUESTION NO'=>'source_question_no','SOURCE_QUESTION_NO'=>'source_question_no',
+        'SOURCE PAGE'=>'source_page','SOURCE_PAGE'=>'source_page',
+        'SOURCE REFERENCE'=>'source_reference','SOURCE_REFERENCE'=>'source_reference',
+        'VALIDATION STATUS'=>'validation_status','VALIDATION_STATUS'=>'validation_status',
+        'VALIDATION NOTES'=>'validation_notes','VALIDATION_NOTES'=>'validation_notes',
+        'RECORD ID'=>'record_id','RECORD_ID'=>'record_id',
+        'COURSE CODE'=>'course_code','COURSE_CODE'=>'course_code',
+        'LANGUAGE'=>'language','SUBJECT NAME'=>'subject_name','SUBJECT_NAME'=>'subject_name'
     ];
 
     $normalizeLabel = static function(string $label): string {
-        $label = strtoupper(trim(preg_replace('/\\s+/u', ' ', $label)));
+        $label = strtoupper(trim(preg_replace('/\s+/u', ' ', $label)));
         $label = str_replace(['_', '—', '–', ':'], [' ', '-', '-', ''], $label);
         return trim($label);
     };
 
-    $parseField = static function(string $line) use ($normalizeLabel, $labelMap): array {
-        if (preg_match('/^\\s*([A-Z][A-Z0-9 _-]{1,30})\\s*[:：]\\s*(.*)$/u', $line, $m)) {
-            $label = $normalizeLabel($m[1]);
-            if (isset($labelMap[$label])) return [$labelMap[$label], trim($m[2]), true];
+    $mapField = static function(string $label) use ($normalizeLabel, $labelMap): string {
+        $label = $normalizeLabel($label);
+        return $labelMap[$label] ?? '';
+    };
+
+    $parseLabelField = static function(string $line) use ($mapField): array {
+        if (preg_match('/^\s*([A-Z][A-Z0-9 _-]{1,40})\s*[:：]\s*(.*)$/u', $line, $m)) {
+            $field = $mapField($m[1]);
+            if ($field !== '') return [$field, trim($m[2]), true];
         }
         return ['', '', false];
+    };
+
+    $parsePipeField = static function(string $line) use ($mapField): array {
+        /*
+         * The native DOCX extractor flattens a two-column table row as:
+         * FIELD | VALUE
+         */
+        if (substr_count($line, '|') < 1) return ['', '', false];
+        [$left, $right] = array_pad(explode('|', $line, 2), 2, '');
+        $field = $mapField($left);
+        if ($field === '') return ['', '', false];
+        return [$field, trim($right), true];
     };
 
     $hasV4 = false;
     foreach ($blocks as $b) {
         $line = trim((string)($b['text'] ?? ''));
-        [$field, $value, $ok] = $parseField($line);
-        if ($ok && in_array($field, ['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'], true)) {
-            $hasV4 = true; break;
+        if ($line === '') continue;
+        [$field, $value, $ok] = $parsePipeField($line);
+        if (!$ok) [$field, $value, $ok] = $parseLabelField($line);
+        if ($ok && in_array($field, [
+            'q_number','unit_no','sub_unit','k_level','co_level','section_type',
+            'marks','question_text','question_type'
+        ], true)) {
+            $hasV4 = true;
+            break;
         }
     }
     if (!$hasV4) return [];
 
     $rows = [];
     $current = null;
-    $flush = static function() use (&$rows, &$current) {
-        if (!$current) return;
+
+    $newCurrent = static function() {
+        return [
+            'warnings' => [],
+            'parser_confidence' => 1.0,
+            'source_format' => 'docx',
+            'parser_version' => 'php-staff-v4-table-v2',
+            'import_schema' => 'staff-v4'
+        ];
+    };
+
+    $flush = static function() use (&$rows, &$current): void {
+        if ($current === null) return;
+
         $q = trim((string)($current['question_text'] ?? ''));
         if ($q === '') {
             $current['warnings'][] = 'QUESTION field is missing or empty.';
-            $current['parser_confidence'] = 0.25;
+            $current['parser_confidence'] = min((float)($current['parser_confidence'] ?? 1), 0.25);
         }
+
+        /*
+         * Some converted source records have an empty QUESTION_NO field but
+         * the original source number is still at the start of QUESTION_TEXT.
+         * Preserve it as source_question_no without making it the global row id.
+         */
+        $sourceNo = (int)($current['source_question_no'] ?? 0);
+        $qNo = (int)($current['q_number'] ?? 0);
+
+        if ($sourceNo <= 0 && $qNo > 0) $sourceNo = $qNo;
+        if ($sourceNo <= 0 && preg_match('/^\s*(?:Q(?:uestion)?\s*)?(\d+)\s*[\.\):\-]\s*/u', $q, $nm)) {
+            $sourceNo = (int)$nm[1];
+        }
+        if ($qNo <= 0 && $sourceNo > 0) $qNo = $sourceNo;
+
+        $current['source_question_no'] = $sourceNo;
+        $current['q_number'] = $qNo;
         $rows[] = $current;
         $current = null;
     };
@@ -710,59 +795,32 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
     foreach ($blocks as $block) {
         $line = trim((string)($block['text'] ?? ''));
         if ($line === '') continue;
-        // DOCX templates may use an 8-column table. The native extractor flattens
-        // each table row with | separators, so support that exact canonical shape too.
-        if (substr_count($line, '|') === 7) {
-            $parts = array_map('trim', preg_split('/\\s*\\|\\s*/u', $line, 8));
-            if (count($parts) === 8 && ctype_digit($parts[0]) && preg_match('/^[1-5]$/', $parts[1])
-                && preg_match('/^[1-5]\\.[1-5]$/', $parts[2])
-                && preg_match('/^K[1-6]$/i', $parts[3])
-                && preg_match('/^CO[1-9][0-9]*$/i', $parts[4])
-                && preg_match('/^(?:SECTION[- ]?)?[A-D]$/i', $parts[5])
-                && is_numeric($parts[6]) && $parts[7] !== '') {
-                $flush();
-                $sec = strtoupper($parts[5]);
-                if (preg_match('/^SECTION[- ]?([A-D])$/i', $sec, $sm)) $sec = 'SECTION-' . $sm[1];
-                else $sec = 'SECTION-' . $sec;
-                $current = [
-                    'q_number' => (int)$parts[0],
-                    'unit_no' => (int)$parts[1],
-                    'sub_unit' => $parts[2],
-                    'k_level' => strtoupper($parts[3]),
-                    'co_level' => strtoupper($parts[4]),
-                    'section_type' => $sec,
-                    'marks' => (int)$parts[6],
-                    'question_text' => $parts[7],
-                    'warnings' => [],
-                    'parser_confidence' => 1.0,
-                    'source_format' => 'docx',
-                    'parser_version' => 'php-staff-v4',
-                    'import_schema' => 'staff-v4'
-                ];
-                continue;
-            }
+
+        // Ignore explicit visual markers used by the standard DOCX template.
+        if (preg_match('/^QUESTION_(?:START|END)\b/i', $line)) continue;
+
+        [$field, $value, $okPipe] = $parsePipeField($line);
+        $ok = $okPipe;
+
+        if (!$ok) {
+            [$field, $value, $ok] = $parseLabelField($line);
         }
-
-        [$field, $value, $ok] = $parseField($line);
-
-        // A new Q.No starts a new logical record.
-        if ($ok && $field === 'q_number') {
-            $flush();
-            $current = [
-                'q_number' => (int)$value,
-                'warnings' => [],
-                'parser_confidence' => 1.0,
-                'source_format' => 'docx',
-                'parser_version' => 'php-staff-v4'
-            ];
-            continue;
-        }
-
-        if ($current === null) continue;
 
         if ($ok) {
-            if ($field === 'question_text') {
-                $current['question_text'] = $value;
+            /*
+             * In the 2-column template every logical record begins with
+             * SECTION. A new SECTION after a completed QUESTION_TEXT means
+             * the previous table has ended.
+             */
+            if ($okPipe && $field === 'section_type' && $current !== null && trim((string)($current['question_text'] ?? '')) !== '') {
+                $flush();
+            }
+
+            if ($current === null) $current = $newCurrent();
+
+            if ($field === 'q_number') {
+                $v = trim($value);
+                $current['q_number'] = ($v !== '' && ctype_digit($v)) ? (int)$v : 0;
             } elseif ($field === 'unit_no') {
                 $current['unit_no'] = (int)$value;
             } elseif ($field === 'sub_unit') {
@@ -776,12 +834,28 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
                 if (preg_match('/^(?:SECTION[- ]?)?([A-D])$/', $v, $m)) $v = 'SECTION-' . $m[1];
                 $current['section_type'] = $v;
             } elseif ($field === 'marks') {
-                $current['marks'] = (int)$value;
+                $current['marks'] = is_numeric($value) ? (int)$value : 0;
+            } elseif ($field === 'question_text') {
+                $current['question_text'] = $value;
+            } elseif ($field === 'question_type') {
+                $current['question_type'] = strtoupper(trim($value));
+            } elseif (in_array($field, [
+                'option_a','option_b','option_c','option_d',
+                'answer_key','assertion','reason',
+                'match_column_a','match_column_b','match_options',
+                'passage_text','either_or_group','compulsory',
+                'source_question_no','source_page','source_reference',
+                'validation_status','validation_notes','record_id',
+                'course_code','language','subject_name'
+            ], true)) {
+                $current[$field] = $value;
             }
             continue;
         }
 
-        // Unlabelled lines after QUESTION belong to the question text.
+        if ($current === null) continue;
+
+        // Unlabelled lines after QUESTION belong to the same logical question.
         if (isset($current['question_text'])) {
             $current['question_text'] .= "\n" . $line;
         } else {
@@ -794,11 +868,22 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
     $out = [];
     foreach ($rows as $idx => $q) {
         $missing = [];
-        foreach (['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'] as $f) {
+        foreach (['unit_no','sub_unit','k_level','section_type','marks','question_text'] as $f) {
             if (!isset($q[$f]) || trim((string)$q[$f]) === '') $missing[] = $f;
         }
+
+        /*
+         * CO is intentionally not inferred. If the source template omits CO,
+         * the record is still extracted and marked for review; the staff/COE
+         * must supply the official CO later.
+         */
+        if (!isset($q['co_level']) || trim((string)$q['co_level']) === '') {
+            $q['warnings'][] = 'CO is missing; no K-level -> CO inference was performed.';
+            $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.85);
+        }
+
         if ($missing) {
-            $q['warnings'][] = 'Missing required fields: ' . implode(', ', $missing);
+            $q['warnings'][] = 'Missing required extraction fields: ' . implode(', ', $missing);
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.40);
         }
 
@@ -806,15 +891,15 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
             $q['warnings'][] = 'Unit must be 1-5.';
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.40);
         }
-        if (isset($q['sub_unit']) && !preg_match('/^[1-5]\\.[1-5]$/', (string)$q['sub_unit'])) {
+        if (isset($q['sub_unit']) && $q['sub_unit'] !== '' && !preg_match('/^[1-5]\.[1-5]$/', (string)$q['sub_unit'])) {
             $q['warnings'][] = 'Sub-Unit should use n.n format.';
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
         }
-        if (isset($q['k_level']) && !preg_match('/^K[1-6]$/', (string)$q['k_level'])) {
+        if (isset($q['k_level']) && $q['k_level'] !== '' && !preg_match('/^K[1-6]$/', (string)$q['k_level'])) {
             $q['warnings'][] = 'K-Level should use K1-K6.';
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
         }
-        if (isset($q['co_level']) && !preg_match('/^CO[1-9][0-9]*$/', (string)$q['co_level'])) {
+        if (isset($q['co_level']) && $q['co_level'] !== '' && !preg_match('/^CO[1-9][0-9]*$/', (string)$q['co_level'])) {
             $q['warnings'][] = 'CO should use CO1, CO2, ...';
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.60);
         }
@@ -823,17 +908,29 @@ function qps_parse_staff_docx_v4(array $blocks, array $sectionMarks = []): array
             $q['parser_confidence'] = min((float)($q['parser_confidence'] ?? 1), 0.50);
         }
 
-        $opts = qps_extract_options_from_text((string)($q['question_text'] ?? ''));
-        if ($opts) $q['options'] = $opts;
+        $q['question_type'] = strtoupper(trim((string)($q['question_type'] ?? '')));
         $q['question_text'] = qps_clean_question_text((string)($q['question_text'] ?? ''));
-        $q['language'] = qps_detect_language($q['question_text']);
-        $q['source_question_no'] = (int)($q['q_number'] ?? 0);
+        $q['answer_key'] = trim((string)($q['answer_key'] ?? ''));
+
+        $opts = [];
+        foreach (['option_a','option_b','option_c','option_d'] as $of) {
+            if (isset($q[$of]) && trim((string)$q[$of]) !== '') $opts[] = trim((string)$q[$of]);
+        }
+        if ($opts) $q['options'] = $opts;
+
+        $q['language'] = trim((string)($q['language'] ?? '')) ?: qps_detect_language($q['question_text']);
+        $q['source_question_no'] = (int)($q['source_question_no'] ?? 0);
+
+        // Global preview numbering is always deterministic; original source
+        // numbering remains in source_question_no.
+        $q['q_number'] = $idx + 1;
         $q['import_schema'] = 'staff-v4';
+        $q['parser_version'] = 'php-staff-v4-table-v2';
         $out[] = $q;
     }
+
     return $out;
 }
-
 function qps_docx_parse(string $path, array $sectionMarks = []): array {
     // Production DOCX extraction is PHP-only. PHPWord is used when installed;
     // the native OOXML path remains the deterministic fallback for XAMPP.
