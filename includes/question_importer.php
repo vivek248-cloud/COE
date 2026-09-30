@@ -281,9 +281,9 @@ function qps_extract_answer_key(string &$text): string {
     }
 
     // 3. Line-based formats: Answer: (a) ..., Key: B, Ans: C, விடை: ..., Réponse: ...
-    if (preg_match('/(?:^|\n)\s*(?:Answer(?:\s*Key)?|Ans|Key|Correct(?:\s*Option)?|Solution|விடை|சரியான\s*விடை|விடைக்குறிப்பு|Réponse|Corrigé|Clé)\s*[:：\-]\s*([^\r\n]+)/iu', $text, $m)) {
+    if (preg_match('/(?:^|\n)\s*(?:Answer(?:\s*Key)?|Ans|Key|Correct(?:\s*Option)?|Solution|விடை|சரியான\s*விடை|விடைக்குறிப்பு|Réponse|Corrigé|Clé)\s*[:：\-]?\s*([^\r\n]+)/iu', $text, $m)) {
         $key = trim($m[1]);
-        $text = preg_replace('/(?:^|\n)\s*(?:Answer(?:\s*Key)?|Ans|Key|Correct(?:\s*Option)?|Solution|விடை|சரியான\s*விடை|விடைக்குறிப்பு|Réponse|Corrigé|Clé)\s*[:：\-]\s*[^\r\n]+/iu', '', $text);
+        $text = preg_replace('/(?:^|\n)\s*(?:Answer(?:\s*Key)?|Ans|Key|Correct(?:\s*Option)?|Solution|விடை|சரியான\s*விடை|விடைக்குறிப்பு|Réponse|Corrigé|Clé)\s*[:：\-]?\s*[^\r\n]+/iu', '', $text);
         $text = trim($text);
         return $key;
     }
