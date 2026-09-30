@@ -264,7 +264,7 @@ try {
         'questions' => $questions,
         'question_count' => count($questions),
         'parser' => [
-            'version' => (($questions[0]['import_schema'] ?? '') === 'staff-v4' ? 'php-staff-v4' : ($ext === 'docx' ? 'php-docx-legacy' : strtoupper($ext) . '-legacy')),
+            'version' => (($questions[0]['import_schema'] ?? '') === 'staff-v4' ? 'php-staff-v4' : (($questions[0]['import_schema'] ?? '') === 'pdf-obe-v1' ? 'php-pdf-obe-v1' : ($ext === 'docx' ? 'php-docx-legacy' : strtoupper($ext) . '-legacy'))),
             'warning_count' => $parserWarningCount,
             'warnings' => $parserWarnings,
             'low_confidence_count' => $lowConfidenceCount,
