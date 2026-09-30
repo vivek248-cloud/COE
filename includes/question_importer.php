@@ -1041,6 +1041,280 @@ function qps_xlsx_rows(string $path): array {
     return qps_rows_to_questions($assoc);
 }
 
+
+/**
+ * Deterministic parser for the institution's text-based OBE PDF layout.
+ *
+ * The PDF contains explicit CODE/LEVEL/UNIT/TYPE metadata. The legacy
+ * line-based parser cannot safely use every numeric line as a question
+ * boundary because MATCH tables contain their own 1., 2., 3., 4. rows.
+ *
+ * Rules:
+ * - CODE/LEVEL/UNIT/TYPE is authoritative metadata.
+ * - MC, VSA, PARAGRAPH and ESSAY use numbered lines as question boundaries.
+ * - MATCH is one logical question block; its internal 1..4 rows stay together.
+ * - ASSERTION_REASON is one logical question block per metadata block.
+ * - Key/KEY/Answer is accepted with or without a colon.
+ */
+function qps_pdf_obe_parse(string $text, array $sectionMarks = []): array {
+    $text = qps_utf8($text);
+    $lines = preg_split('/\R/u', $text);
+    $questions = [];
+    $current = null;
+    $ctx = [
+        'unit_no' => 1,
+        'sub_unit' => '1.1',
+        'k_level' => 'K1',
+        'type' => 'MCQ',
+        'section_type' => 'SECTION-A',
+        'marks' => 1,
+        'source_question_no' => 0,
+        'code' => ''
+    ];
+
+    $normalizeType = static function(string $type): string {
+        $t = strtoupper(trim($type));
+        $t = preg_replace('/[^A-Z_]/', '', $t);
+        return match ($t) {
+            'MC', 'MCQ' => 'MCQ',
+            'M', 'MATCH' => 'MATCH',
+            'AR', 'ASSERTION', 'ASSERTIONREASON', 'ASSERTION_REASON' => 'ASSERTION_REASON',
+            'VSA', 'SA', 'SHORT' => 'VSA',
+            'PA', 'P', 'PARAGRAPH', 'PARAGRAPHANSWER' => 'PARAGRAPH',
+            'E', 'ESSAY', 'DESCRIPTIVE' => 'ESSAY',
+            default => $t !== '' ? $t : 'VSA'
+        };
+    };
+
+    $flush = static function() use (&$questions, &$current, &$ctx, $normalizeType): void {
+        if ($current === null) return;
+        $body = qps_normalize_space((string)($current['question_text'] ?? ''));
+        if ($body === '') {
+            $current = null;
+            return;
+        }
+
+        $q = [
+            'question_text' => qps_clean_question_text($body),
+            'unit_no' => (int)$current['unit_no'],
+            'sub_unit' => (string)$current['sub_unit'],
+            'k_level' => strtoupper((string)$current['k_level']),
+            'section_type' => (string)$current['section_type'],
+            'marks' => (int)$current['marks'],
+            'question_type' => $normalizeType((string)$current['type']),
+            'answer_key' => trim((string)($current['answer_key'] ?? '')),
+            'source_question_no' => (int)($current['source_question_no'] ?? 0),
+            'source_code' => (string)($current['code'] ?? '')
+        ];
+
+        // Match/Assertion blocks need their complete text preserved. The
+        // normal defaults layer will still extract options and normalize fields.
+        $questions[] = $q;
+        $current = null;
+    };
+
+    $newQuestion = static function(string $body, array $blockCtx, int $sourceNo): array {
+        return [
+            'question_text' => trim($body),
+            'unit_no' => (int)$blockCtx['unit_no'],
+            'sub_unit' => (string)$blockCtx['sub_unit'],
+            'k_level' => (string)$blockCtx['k_level'],
+            'section_type' => (string)$blockCtx['section_type'],
+            'marks' => (int)$blockCtx['marks'],
+            'type' => (string)$blockCtx['type'],
+            'answer_key' => '',
+            'source_question_no' => $sourceNo,
+            'code' => (string)$blockCtx['code']
+        ];
+    };
+
+    $applyContext = static function(array $m) use (&$ctx, $normalizeType, $sectionMarks): void {
+        $ctx['code'] = trim((string)($m['code'] ?? ''));
+        $ctx['k_level'] = strtoupper(trim((string)($m['level'] ?? 'K1')));
+        if (!preg_match('/^K[1-6]$/', $ctx['k_level'])) $ctx['k_level'] = 'K1';
+
+        $ctx['sub_unit'] = trim((string)($m['unit'] ?? '1.1'));
+        if (!preg_match('/^[1-5]\.[1-5]$/', $ctx['sub_unit'])) $ctx['sub_unit'] = '1.1';
+        $ctx['unit_no'] = (int)substr($ctx['sub_unit'], 0, 1);
+        $ctx['type'] = $normalizeType((string)($m['type'] ?? 'MCQ'));
+
+        $section = strtoupper((string)$ctx['section_type']);
+        $defaultMarks = match ($section) {
+            'SECTION-B' => 5,
+            'SECTION-C' => 10,
+            'SECTION-D' => 10,
+            default => 1
+        };
+        $ctx['marks'] = $defaultMarks;
+
+        if (isset($sectionMarks[$section])) {
+            $candidate = (int)$sectionMarks[$section];
+            if ($candidate > 0) $ctx['marks'] = $candidate;
+        }
+    };
+
+    foreach ($lines as $rawLine) {
+        $line = qps_normalize_space((string)$rawLine);
+        if ($line === '') continue;
+
+        // Unit headings.
+        if (preg_match('/^Unit\s*[-:]?\s*(?:I{1,3}|IV|V|[1-5])\b/iu', $line, $um)) {
+            $flush();
+            $u = strtoupper(trim(preg_replace('/^Unit\s*[-:]?\s*/iu', '', $line)));
+            $u = str_replace(['UNIT', '-', ':'], '', $u);
+            $ctx['unit_no'] = is_numeric($u) ? (int)$u : qps_roman_to_int($u);
+            $ctx['sub_unit'] = $ctx['unit_no'] . '.1';
+            continue;
+        }
+
+        // Section headings.
+        if (preg_match('/^SECTION\s*[-:]?\s*([A-D])/iu', $line, $sm)) {
+            $flush();
+            $ctx['section_type'] = 'SECTION-' . strtoupper($sm[1]);
+            continue;
+        }
+
+        // Explicit PDF metadata line. Allow CODE/CODE:, missing spaces,
+        // TYPE values MC/M/AR/VSA/PA/P/E, and metadata followed immediately
+        // by the first numbered question.
+        if (preg_match(
+            '/CODE\s*:?\s*([A-Z0-9_-]+).*?LEVEL\s*:?\s*(K[1-6]).*?UNIT\s*:?\s*([1-5]\.[1-5]).*?TYPE\s*:?\s*([A-Z_]+)(?:\s+(.*))?$/iu',
+            $line,
+            $mm
+        )) {
+            $flush();
+            $applyContext([
+                'code' => $mm[1],
+                'level' => $mm[2],
+                'unit' => $mm[3],
+                'type' => $mm[4]
+            ]);
+
+            $tail = trim((string)($mm[5] ?? ''));
+            if ($tail !== '') {
+                if (preg_match('/^(\d+)\s*[\.\):\-]\s*(.*)$/u', $tail, $qm)) {
+                    $current = $newQuestion($qm[2], $ctx, (int)$qm[1]);
+                } else {
+                    $current = $newQuestion($tail, $ctx, 0);
+                }
+            }
+            continue;
+        }
+
+        // Some source lines omit CODE entirely. Accept LEVEL/UNIT/TYPE as
+        // authoritative context too.
+        if (preg_match(
+            '/LEVEL\s*:?\s*(K[1-6]).*?UNIT\s*:?\s*([1-5]\.[1-5]).*?TYPE\s*:?\s*([A-Z_]+)/iu',
+            $line,
+            $mm
+        )) {
+            $flush();
+            $applyContext([
+                'code' => $ctx['code'],
+                'level' => $mm[1],
+                'unit' => $mm[2],
+                'type' => $mm[3]
+            ]);
+            $tail = trim(preg_replace('/^.*?TYPE\s*:?\s*[A-Z_]+\s*/iu', '', $line));
+            if ($tail !== '' && preg_match('/^(\d+)\s*[\.\):\-]\s*(.*)$/u', $tail, $qm)) {
+                $current = $newQuestion($qm[2], $ctx, (int)$qm[1]);
+            }
+            continue;
+        }
+
+        // Answer key. Accept "Key: a", "Key a", "KEY:c", "Answer: (b)" and
+        // the same token when it is attached to the preceding line.
+        if (preg_match('/^\s*(?:Answer(?:\s*Key)?|Ans|Key|Solution|Correct(?:\s*Option)?|விடை|சரியான\s*விடை|Réponse|Corrigé)\s*[:：\-]?\s*(.+?)\s*$/iu', $line, $ak)) {
+            if ($current !== null) {
+                $current['answer_key'] = trim($ak[1]);
+            }
+            continue;
+        }
+
+        // Handle an inline trailing key such as "... d. option Key:b".
+        if ($current !== null && preg_match('/(?:^|\s)(?:Key|Ans|Answer)\s*[:：\-]?\s*([A-E])\s*$/iu', $line, $ik)) {
+            $current['answer_key'] = strtoupper(trim($ik[1]));
+            $clean = trim(preg_replace('/(?:^|\s)(?:Key|Ans|Answer)\s*[:：\-]?\s*[A-E]\s*$/iu', '', $line));
+            if ($clean !== '') $current['question_text'] .= "\n" . $clean;
+            continue;
+        }
+
+        $type = strtoupper((string)$ctx['type']);
+
+        // MATCH is special: its internal 1..4 rows are table data, not new
+        // questions. Only a new metadata line starts another MATCH question.
+        if ($type === 'MATCH') {
+            if ($current === null) {
+                if (preg_match('/^(\d+)\s*[\.\):\-]\s*(.*)$/u', $line, $qm)) {
+                    $current = $newQuestion($qm[2], $ctx, (int)$qm[1]);
+                } else {
+                    $current = $newQuestion($line, $ctx, 0);
+                }
+            } else {
+                $current['question_text'] .= "\n" . $line;
+            }
+            continue;
+        }
+
+        // For MC/VSA/PARAGRAPH/ESSAY/AR, a numbered line is a logical
+        // question boundary. This is what prevents questions from being
+        // silently swallowed when numbering restarts inside a unit/type.
+        if (preg_match('/^(\d+)\s*[\.\):\-]\s*(.*)$/u', $line, $qm)) {
+            $flush();
+            $current = $newQuestion($qm[2], $ctx, (int)$qm[1]);
+            continue;
+        }
+
+        // Ignore table headings that occur before the first logical question.
+        if ($current === null && preg_match('/^(?:Column\s+A|Column\s+B|Additional\s+Column|Panel\s+Options)$/iu', $line)) {
+            continue;
+        }
+
+        if ($current !== null) {
+            $current['question_text'] .= "\n" . $line;
+        }
+    }
+
+    $flush();
+
+    $out = [];
+    $i = 1;
+    foreach ($questions as $q) {
+        $q['q_number'] = $i++;
+        $q['source_question_no'] = (int)($q['source_question_no'] ?? 0);
+        $q['import_schema'] = 'pdf-obe-v1';
+        $q['parser_version'] = 'php-pdf-obe-v1';
+        $q['question_type'] = strtoupper((string)($q['question_type'] ?? $q['type'] ?? 'VSA'));
+
+        // Clean the key from the body one final time in case Poppler joined
+        // "Key:" onto the previous line.
+        $body = (string)($q['question_text'] ?? '');
+        $key = (string)($q['answer_key'] ?? '');
+        if ($key === '' && preg_match('/(?:^|\s)(?:Key|Ans|Answer)\s*[:：\-]?\s*([A-E])\s*$/iu', $body, $km)) {
+            $key = strtoupper($km[1]);
+            $body = trim(preg_replace('/(?:^|\s)(?:Key|Ans|Answer)\s*[:：\-]?\s*[A-E]\s*$/iu', '', $body));
+        }
+        $q['answer_key'] = $key;
+        $q['question_text'] = qps_clean_question_text($body);
+        $out[] = qps_question_defaults($q, $i - 1);
+
+        // qps_question_defaults may infer fields for legacy compatibility,
+        // but explicit PDF metadata remains authoritative.
+        $out[array_key_last($out)]['unit_no'] = (int)$q['unit_no'];
+        $out[array_key_last($out)]['sub_unit'] = (string)$q['sub_unit'];
+        $out[array_key_last($out)]['k_level'] = strtoupper((string)$q['k_level']);
+        $out[array_key_last($out)]['section_type'] = (string)$q['section_type'];
+        $out[array_key_last($out)]['marks'] = (int)$q['marks'];
+        $out[array_key_last($out)]['answer_key'] = trim((string)$q['answer_key']);
+        $out[array_key_last($out)]['question_type'] = strtoupper((string)$q['question_type']);
+        $out[array_key_last($out)]['source_question_no'] = (int)$q['source_question_no'];
+        $out[array_key_last($out)]['import_schema'] = 'pdf-obe-v1';
+        $out[array_key_last($out)]['parser_version'] = 'php-pdf-obe-v1';
+    }
+
+    return $out;
+}
+
 function qps_pdf_text(string $path): string {
     if (!function_exists('exec')) return '';
     $cmd = getenv('QPS_PDFTOTEXT') ?: 'pdftotext';
@@ -1097,6 +1371,13 @@ function qps_parse_file(string $path, string $ext, string $ocrLang = 'eng', bool
             $text = qps_pdf_text($path);
             if ($forceOcr || strlen(trim($text)) < 80) {
                 return ['questions' => [], 'ocr_used' => true];
+            }
+            // Prefer the deterministic Holy Cross OBE PDF parser. Fall back
+            // to the generic parser only when the PDF has no recognizable
+            // CODE/LEVEL/UNIT/TYPE structure.
+            $pdfQuestions = qps_pdf_obe_parse($text, $sectionMarks);
+            if (!empty($pdfQuestions)) {
+                return ['questions' => $pdfQuestions, 'ocr_used' => false];
             }
             $lines = preg_split('/\R/u', $text);
             $blocks = [];
