@@ -96,9 +96,10 @@ if (!$user) return;
           <?php endif; ?>
         </a>
 
-        <a href="<?php echo $baseUrl; ?>/modules/coe/blueprint.php" class="flex items-center space-x-2.5 px-3 py-2.5 rounded-xl font-bold transition <?php echo strpos($currentScript, 'blueprint.php') !== false ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800 hover:text-white'; ?>">
+        <a href="<?php echo $baseUrl; ?>/modules/teaching/question_bank_blueprint.php" class="flex items-center space-x-2.5 px-3 py-2.5 rounded-xl font-bold transition <?php echo strpos($currentScript, 'question_bank_blueprint.php') !== false ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800 hover:text-white'; ?>">
           <i data-lucide="layout-template" class="w-4 h-4 text-purple-400"></i>
-          <span>Master Blueprint (275-Q Pool)</span>
+          <span>Course Question Bank Blueprint</span>
+          <?php if ($isHod): ?><span class="ml-auto bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] px-1.5 py-0.5 rounded-full font-black">HOD</span><?php endif; ?>
         </a>
 
         <a href="<?php echo $baseUrl; ?>/modules/teaching/upload.php" class="flex items-center space-x-2.5 px-3 py-2.5 rounded-xl font-bold transition <?php echo strpos($currentScript, 'teaching/upload.php') !== false ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800 hover:text-white'; ?>">
