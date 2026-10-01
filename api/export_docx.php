@@ -40,7 +40,14 @@ try {
 
     file_put_contents($jsonFile, json_encode($paper, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-    $cmd = 'python3 ' . escapeshellarg(__DIR__ . '/../docx_generator.py') . ' ' . escapeshellarg($jsonFile) . ' ' . escapeshellarg($docxFile);
+    // Image-aware wrapper keeps the existing institutional generator unchanged
+    // while embedding question diagrams/images into the final DOCX.
+    $generator = __DIR__ . '/../docx_generator_with_images.py';
+    if (!file_exists($generator)) {
+        // Backward-compatible fallback for installations not yet updated.
+        $generator = __DIR__ . '/../docx_generator.py';
+    }
+    $cmd = 'python3 ' . escapeshellarg($generator) . ' ' . escapeshellarg($jsonFile) . ' ' . escapeshellarg($docxFile);
     exec($cmd . ' 2>&1', $output, $retCode);
 
     if ($retCode !== 0 || !file_exists($docxFile)) {
