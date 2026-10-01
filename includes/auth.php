@@ -21,10 +21,6 @@ function getUserRole(): string {
     return $_SESSION['user']['role'] ?? 'GUEST';
 }
 
-/**
- * Check if the current user belongs to the ERP department or has administrative privileges.
- * ERP staff has full grand access across all pages (COE, Admin, Master Repositories, Teaching).
- */
 function isERPStaff(): bool {
     if (!isLoggedIn()) return false;
     $role = strtoupper(getUserRole());
@@ -36,7 +32,6 @@ function isERPStaff(): bool {
     $staffCode = strtoupper((string)($user['staff_code'] ?? ''));
     $desig = strtoupper((string)($user['designation'] ?? ''));
     
-    // Check if staff department or code in pr_x_xxxx_staf_prof_mast is ERP, Admin, Computer, System, or Software
     if (strpos($dept, 'ERP') !== false || strpos($dept, 'RP') !== false || strpos($dept, 'ADMIN') !== false || strpos($dept, 'SYSTEM') !== false || strpos($dept, 'COMPUTER') !== false || strpos($dept, 'SOFTWARE') !== false || strpos($staffCode, 'ADMIN') !== false || strpos($staffCode, 'ERP') !== false || strpos($desig, 'ERP') !== false || strpos($desig, 'DEVELOPER') !== false || strpos($desig, 'ADMIN') !== false || strpos($desig, 'WEB ADMIN') !== false || strpos($desig, 'DEV') !== false) {
         return true;
     }
@@ -52,10 +47,6 @@ function isSuperAdmin(): bool {
     return isERPStaff();
 }
 
-/**
- * COE access check:
- * Grants access to COE Office, Super Admin, and ERP Department
- */
 function isCOE(): bool {
     if (!isLoggedIn()) return false;
     $role = strtoupper(getUserRole());
@@ -78,19 +69,13 @@ function isHOD(): bool {
 }
 
 /**
- * College ERP Rule:
- * Super Admin and ERP staff have full grand CRUD & edit access (NOT read-only)
- * across all ERP Master tables:
- * - Staff Master (pr_x_xxxx_staf_prof_mast)
- * - Departments (departments)
- * - Courses (courses)
- * - Faculty Timetable Allocations (timetablefaculty)
- * - Blueprints (blueprints)
- * - Question Banks (question_banks)
+ * Only Super Admin / ERP staff can modify ERP master repositories.
+ * COE staff must not receive admin CRUD privileges merely because they can
+ * review question banks and generate examination papers.
  */
 function canEditERPMasters(): bool {
     if (!isLoggedIn()) return false;
-    return isSuperAdmin() || isERPStaff() || isCOE();
+    return isSuperAdmin() || isERPStaff();
 }
 
 function requireAuth(): void {
@@ -109,10 +94,14 @@ function requireCOE(): void {
     }
 }
 
+/**
+ * Super-admin-only guard. Normal COE users are redirected to the COE dashboard,
+ * never back to an admin URL, preventing admin-route access and redirect loops.
+ */
 function requireSuperAdmin(): void {
     requireAuth();
     if (!isSuperAdmin() && !isERPStaff()) {
-        header("Location: " . getBaseUrl() . "/modules/admin/index.php?error=superadmin_required");
+        header("Location: " . getBaseUrl() . "/modules/coe/dashboard.php?error=admin_access_denied");
         exit;
     }
 }
