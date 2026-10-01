@@ -7,6 +7,11 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/pagination.php';
+
+// COE staff should see only the COE application surface. Admin URLs are
+// additionally protected server-side by requireSuperAdmin(); this flag only
+// controls navigation visibility so the UI does not expose admin routes.
+$qpsRestrictedCOE = isCOE() && !isSuperAdmin();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,7 +32,17 @@ require_once __DIR__ . '/pagination.php';
   <!-- Base URL Definition for JS -->
   <script>
     window.QPS_BASE_URL = "<?php echo getBaseUrl(); ?>";
+    window.QPS_RESTRICTED_COE = <?php echo $qpsRestrictedCOE ? 'true' : 'false'; ?>;
   </script>
+
+  <?php if ($qpsRestrictedCOE): ?>
+  <style id="qps-coe-admin-route-hide">
+    .qps-coe-restricted a[href*="/modules/admin/"],
+    .qps-coe-restricted a[href*="login_as_erp=1"] {
+      display: none !important;
+    }
+  </style>
+  <?php endif; ?>
 
   <!-- Searchable Select with Typing Finder -->
   <script src="<?php echo getBaseUrl(); ?>/assets/js/searchable-select.js"></script>
@@ -49,4 +64,15 @@ require_once __DIR__ . '/pagination.php';
     src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
   </script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased<?php echo $qpsRestrictedCOE ? ' qps-coe-restricted' : ''; ?>">
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.QPS_RESTRICTED_COE) return;
+  document.querySelectorAll('a[href*="/modules/admin/"], a[href*="login_as_erp=1"]').forEach(function (el) {
+    el.remove();
+  });
+  document.querySelectorAll('#qps-sidebar-drawer .space-y-1').forEach(function (section) {
+    if (!section.querySelector('a')) section.remove();
+  });
+});
+</script>

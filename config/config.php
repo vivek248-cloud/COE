@@ -11,6 +11,23 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Hard server-side boundary for the /modules/admin surface.
+// This runs before the admin page loads and prevents normal COE/Faculty/HOD
+// sessions from reaching an admin URL even when the URL is typed manually.
+if (strpos((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/modules/admin/') !== false && !empty($_SESSION['user'])) {
+    $qpsRole = strtoupper((string)($_SESSION['user']['role'] ?? ''));
+    $qpsAdminAllowed = in_array($qpsRole, ['SUPER_ADMIN', 'ADMIN', 'ERP_ADMIN', 'ERP_STAFF', 'SYSTEM_ADMIN'], true)
+        || !empty($_SESSION['user']['is_super_admin'])
+        || !empty($_SESSION['user']['is_erp_staff']);
+    if (!$qpsAdminAllowed) {
+        $base = (strpos((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/Question-Paper-System-new') !== false)
+            ? '/Question-Paper-System-new'
+            : '';
+        header('Location: ' . $base . '/modules/coe/dashboard.php?error=admin_access_denied');
+        exit;
+    }
+}
+
 // College and System Constants
 define('APP_NAME', 'Holy Cross College Exam Paper & OBE Blueprint System');
 define('COLLEGE_NAME', 'HOLY CROSS COLLEGE (AUTONOMOUS)');
