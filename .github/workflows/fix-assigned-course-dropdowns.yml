@@ -1,0 +1,36 @@
+name: Fix assigned course dropdowns
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor == 'vivek248-cloud' || github.actor == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch faculty course scope
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('modules/teaching/upload.php')
+          s = p.read_text(encoding='utf-8')
+          start = s.index('// Fetch all courses for dynamic department selection')
+          end = s.index('$bankId =', start)
+          replacement = '''// Keep every course/paper-code dropdown scoped to the logged-in user's allocation.\n// COE is intentionally the only role that can see the complete course master.\n$allCourses = [];\nif ($isCoe) {\n    try {\n        $stAllC = $pdo->query("SELECT coursecode, coursetitle, dept_code, level, maxmark, credit, type FROM courses ORDER BY coursecode ASC");\n        $allCourses = $stAllC->fetchAll(PDO::FETCH_ASSOC);\n    } catch (Throwable $e) {}\n} else {\n    $allCourses = $assignedCourses;\n}\nforeach ($allCourses as &$__c) { $__c['exam_marks'] = hcc_course_exam_info($__c)['exam_marks']; }\nunset($__c);\n\n'''
+          s = s[:start] + replacement + s[end:]
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit and remove one-time workflow
+        run: |
+          rm -f .github/workflows/fix-assigned-course-dropdowns.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add modules/teaching/upload.php .github/workflows/fix-assigned-course-dropdowns.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'Scope faculty course dropdowns to assigned courses'
+          git push
