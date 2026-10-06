@@ -19,27 +19,89 @@ $badgeStats = [
     'pending_banks' => 0,
     'approved_banks' => 0,
     'my_assigned' => 0,
+    'my_banks' => 0,
+    'my_pending_batches' => 0,
     'blueprints' => 0,
     'generated' => 0
 ];
 
 try {
     $pdo = getDBConnection();
-    if ($isCoeAdmin) {
-        $badgeStats['pending_banks'] = (int)$pdo->query("SELECT COUNT(*) FROM question_banks WHERE status = 'Submitted'")->fetchColumn();
-        $badgeStats['approved_banks'] = (int)$pdo->query("SELECT COUNT(*) FROM question_banks WHERE status = 'Approved'")->fetchColumn();
-        $badgeStats['blueprints'] = (int)$pdo->query("SELECT COUNT(*) FROM blueprints")->fetchColumn();
-        $badgeStats['generated'] = (int)$pdo->query("SELECT COUNT(*) FROM generated_papers")->fetchColumn();
-    } elseif ($user) {
-        $stA = $pdo->prepare("SELECT COUNT(DISTINCT papercode) FROM timetablefaculty WHERE fid = ?");
-        $stA->execute([$user['staff_code']]);
-        $badgeStats['my_assigned'] = (int)$stA->fetchColumn();
 
-        $stM = $pdo->prepare("SELECT COUNT(*) FROM question_banks WHERE staff_code = ?");
-        $stM->execute([$user['staff_code']]);
-        $badgeStats['my_banks'] = (int)$stM->fetchColumn();
+    if ($isCoeAdmin) {
+        // COE sees both legacy/master submitted banks and the new HOD draft queue.
+        try {
+            $badgeStats['pending_banks'] = (int)$pdo->query(
+                "SELECT COUNT(*) FROM question_banks WHERE status IN ('Submitted','Submitted to COE')"
+            )->fetchColumn();
+        } catch (Throwable $e) {}
+
+        try {
+            $badgeStats['pending_banks'] += (int)$pdo->query(
+                "SELECT COUNT(*) FROM qps_question_bank_drafts WHERE status = 'SUBMITTED_TO_HOD'"
+            )->fetchColumn();
+        } catch (Throwable $e) {}
+
+        try {
+            $badgeStats['approved_banks'] = (int)$pdo->query(
+                "SELECT COUNT(*) FROM question_banks WHERE status = 'Approved'"
+            )->fetchColumn();
+        } catch (Throwable $e) {}
+
+        try {
+            $badgeStats['blueprints'] = (int)$pdo->query("SELECT COUNT(*) FROM blueprints")->fetchColumn();
+        } catch (Throwable $e) {}
+
+        try {
+            $badgeStats['generated'] = (int)$pdo->query("SELECT COUNT(*) FROM generated_papers")->fetchColumn();
+        } catch (Throwable $e) {}
+    } elseif ($user) {
+        // Assigned course count comes from ERP timetablefaculty.
+        try {
+            $stA = $pdo->prepare("SELECT COUNT(DISTINCT papercode) FROM timetablefaculty WHERE fid = ?");
+            $stA->execute([$user['staff_code']]);
+            $badgeStats['my_assigned'] = (int)$stA->fetchColumn();
+        } catch (Throwable $e) {}
+
+        // Master question-bank count for the logged-in staff member.
+        try {
+            $stM = $pdo->prepare("SELECT COUNT(*) FROM question_banks WHERE UPPER(staff_code) = UPPER(?)");
+            $stM->execute([$user['staff_code']]);
+            $badgeStats['my_banks'] = (int)$stM->fetchColumn();
+        } catch (Throwable $e) {}
+
+        // NEW: notification batch count.
+        // Staff sees their own SUBMITTED_TO_HOD batches.
+        // HOD sees pending batches from their department.
+        try {
+            if ($isHod) {
+                $dept = trim((string)($user['dept_code'] ?? ''));
+                if ($dept !== '') {
+                    $stP = $pdo->prepare(
+                        "SELECT COUNT(*) FROM qps_question_bank_drafts
+                         WHERE status = 'SUBMITTED_TO_HOD' AND UPPER(dept_code) = UPPER(?)"
+                    );
+                    $stP->execute([$dept]);
+                } else {
+                    $stP = $pdo->query(
+                        "SELECT COUNT(*) FROM qps_question_bank_drafts WHERE status = 'SUBMITTED_TO_HOD'"
+                    );
+                }
+            } else {
+                $stP = $pdo->prepare(
+                    "SELECT COUNT(*) FROM qps_question_bank_drafts
+                     WHERE status = 'SUBMITTED_TO_HOD' AND UPPER(staff_code) = UPPER(?)"
+                );
+                $stP->execute([$user['staff_code']]);
+            }
+            $badgeStats['my_pending_batches'] = (int)$stP->fetchColumn();
+        } catch (Throwable $e) {
+            $badgeStats['my_pending_batches'] = 0;
+        }
     }
-} catch (Exception $e) {}
+} catch (Throwable $e) {
+    // Sidebar must never break the page because a badge query failed.
+}
 
 if (!$user) return;
 ?>
@@ -109,13 +171,20 @@ if (!$user) return;
         </a>
 
         <a href="<?php echo $baseUrl; ?>/modules/teaching/view_banks.php" class="flex items-center justify-between px-3 py-2.5 rounded-xl font-bold transition <?php echo strpos($currentScript, 'teaching/view_banks.php') !== false ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800 hover:text-white'; ?>">
-          <div class="flex items-center space-x-2.5">
-            <i data-lucide="archive" class="w-4 h-4 text-emerald-400"></i>
-            <span>My Question Banks</span>
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <i data-lucide="archive" class="w-4 h-4 text-emerald-400 flex-none"></i>
+            <span class="truncate">My Question Banks</span>
           </div>
-          <?php if (!empty($badgeStats['my_banks'])): ?>
-            <span class="bg-emerald-900 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono"><?php echo $badgeStats['my_banks']; ?></span>
-          <?php endif; ?>
+          <div class="flex items-center gap-1.5 ml-2 flex-none">
+            <?php if (!empty($badgeStats['my_banks'])): ?>
+              <span class="bg-emerald-900 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono" title="Stored question banks"><?php echo $badgeStats['my_banks']; ?></span>
+            <?php endif; ?>
+            <?php if (!empty($badgeStats['my_pending_batches'])): ?>
+              <span class="bg-amber-400 text-slate-950 text-[10px] font-black min-w-[22px] h-[22px] inline-flex items-center justify-center rounded-full shadow-sm animate-pulse" title="Pending question-bank batches requiring HOD verification">
+                <?php echo $badgeStats['my_pending_batches']; ?>
+              </span>
+            <?php endif; ?>
+          </div>
         </a>
 
         <a href="<?php echo $baseUrl; ?>/modules/teaching/download_template.php" class="flex items-center space-x-2.5 px-3 py-2.5 rounded-xl font-bold transition <?php echo strpos($currentScript, 'teaching/download_template.php') !== false ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800 hover:text-white'; ?>">
@@ -211,7 +280,7 @@ if (!$user) return;
           <span>Timetable Allocations</span>
         </a>
 
-        <a href="<?php echo $baseUrl; ?>/modules/admin/index.php?tab=audit" class="flex items-center space-x-2.5 px-3 py-2 rounded-xl font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+        <a href="<?php echo $baseUrl; ?>/modules/admin/index.php?tab=audit" class="flex items-center space-x-2.5 px-3 py-2 rounded-xl font-bold transition text-slate-300 hover:text-white hover:bg-slate-800">
           <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
           <span>Security Audit Logs</span>
         </a>
@@ -236,7 +305,7 @@ function toggleQpsSidebar() {
   const drawer = document.getElementById('qps-sidebar-drawer');
   const backdrop = document.getElementById('qps-sidebar-backdrop');
   if (!drawer || !backdrop) return;
-  
+
   if (drawer.classList.contains('-translate-x-full')) {
     drawer.classList.remove('-translate-x-full');
     backdrop.classList.remove('hidden');
