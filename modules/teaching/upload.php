@@ -68,14 +68,19 @@ try {
     }
 } catch (Throwable $e) {}
 
-// Fetch all courses for dynamic department selection
+// Keep every course/paper-code dropdown scoped to the logged-in user's allocation.
+// COE is intentionally the only role that can see the complete course master.
 $allCourses = [];
-try {
-    $stAllC = $pdo->query("SELECT coursecode, coursetitle, dept_code, level, maxmark, credit, type FROM courses ORDER BY coursecode ASC");
-    $allCourses = $stAllC->fetchAll(PDO::FETCH_ASSOC);
-  foreach ($allCourses as &$__c) { $__c['exam_marks'] = hcc_course_exam_info($__c)['exam_marks']; }
-  unset($__c);
-} catch (Exception $e) {}
+if ($isCoe) {
+    try {
+        $stAllC = $pdo->query("SELECT coursecode, coursetitle, dept_code, level, maxmark, credit, type FROM courses ORDER BY coursecode ASC");
+        $allCourses = $stAllC->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {}
+} else {
+    $allCourses = $assignedCourses;
+}
+foreach ($allCourses as &$__c) { $__c['exam_marks'] = hcc_course_exam_info($__c)['exam_marks']; }
+unset($__c);
 
 $bankId = (int)($_GET['bank_id'] ?? 0);
 $draftId = (int)($_GET['draft_id'] ?? 0);
