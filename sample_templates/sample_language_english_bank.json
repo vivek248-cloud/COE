@@ -1,0 +1,327 @@
+{
+  "paper_code": "U25EL1GEN01",
+  "course_title": "GENERAL ENGLISH – I",
+  "dept_code": "ENG",
+  "semester": "Semester 1",
+  "academic_year": "2025-2026",
+  "degree_level": "UG",
+  "max_marks": 75,
+  "regulation": "2024 (OBE)",
+  "questions": [
+    {
+      "q_number": 1,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What does the poet request from God in A Patch of Land?\na. A vast estate\nb. A small piece of land\nc. Wealth and prosperity\nd. A mansion"
+    },
+    {
+      "q_number": 2,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What poisoned the mother in The Night of The Scorpion?\na. A snake\nb. A scorpion\nc. Acid rain\nd. Wasps"
+    },
+    {
+      "q_number": 3,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What is the name of Air India's first international aircraft as mentioned in Harish Bhat's JRD?\na. Malabar Queen\nb. Kerala Princess\nc. Kerala Kings\nd. Malabar Princess"
+    },
+    {
+      "q_number": 4,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What is Uncle Podger's attitude towards hanging the picture in Uncle Podger Hangs a Picture?\na. Hesitant\nb. Over-confident\nc. Reluctant\nd. Disinterested"
+    },
+    {
+      "q_number": 5,
+      "unit_no": 2,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Why did the animals follow the owl without questioning him in The Owl who was a God?\na. They thought he was wise and divine\nb. They wanted to protect him\nc. They were afraid of him\nd. They wanted to find food"
+    },
+    {
+      "q_number": 6,
+      "unit_no": 2,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Why did the autumn not yield fruit in the giant's garden in The Selfish Giant?\na. A huge wall was built\nb. Plants withered\nc. No children to play\nd. No rain"
+    },
+    {
+      "q_number": 7,
+      "unit_no": 2,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Complete this sentence with the correct Article:\n___ dog is playing in the yard.\na. A\nb. The\nc. An\nd. an, a"
+    },
+    {
+      "q_number": 8,
+      "unit_no": 3,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "Applying the grammatical rules of the verb, fill in the blank with the correct form of the verb in the following sentence:\nRam ---------- fast in the race.\na. Run\nb. Ran\nc. Fast\nd. In"
+    },
+    {
+      "q_number": 9,
+      "unit_no": 3,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "You were taught how to introduce others in a situation, so apply the techniques of introducing someone to a stranger. If you meet someone new at a conference, how will you react?\na. Ignore and walk away\nb. Wave and walk away\nc. Say, 'Hello, my name is [Your Name].'\nd. Say nothing."
+    },
+    {
+      "q_number": 10,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "Match the synonyms from the poem A Patch of Land in Column A with their appropriate meaning in Column B and choose the correct panel:\nColumn A:\n1. Patch\n2. Fronds\n3. Gleam\n4. Tender\nColumn B:\nA. Being soft and edible\nB. To glow and sparkle\nC. Large palm leaves with many divisions\nD. A piece of ground\na. 1A, 2B, 3C, 4D\nb. 1C, 2E, 3A, 4B\nc. 1D, 2C, 3B, 4A\nd. 1D, 2C, 3E, 4A"
+    },
+    {
+      "q_number": 11,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What does the poet imply about the role of nature in human life in the poem A Patch of Land?"
+    },
+    {
+      "q_number": 12,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What did the villagers say about the scorpion sting in The Night of the Scorpion?"
+    },
+    {
+      "q_number": 13,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "List any two values of JRD Tata that helped him to succeed in aviation business according to Harish Bhat's JRD."
+    },
+    {
+      "q_number": 14,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What happens when Uncle Podger tries to mark the spot for the nail in Uncle Podger Hangs a Picture?"
+    },
+    {
+      "q_number": 15,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What does the owl represent in the story in James Thurber's The Owl who was a God?"
+    },
+    {
+      "q_number": 16,
+      "unit_no": 2,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "How does the grandmother show her respect for her teacher in Sudha Murthy's How I Taught my Grandmother to Read?"
+    },
+    {
+      "q_number": 17,
+      "unit_no": 2,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Why are the parts of speech important in a sentence?"
+    },
+    {
+      "q_number": 18,
+      "unit_no": 3,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "Applying the grammatical rules for the parts of speech identify the correct part of speech of the italicized word in the following sentence:\nSwimming is the best exercise."
+    },
+    {
+      "q_number": 19,
+      "unit_no": 3,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "You are in an important business meeting and get a personal emergency call from home. You are under pressure and have to leave the place immediately, apply the polite way of expression you would choose?"
+    },
+    {
+      "q_number": 20,
+      "unit_no": 3,
+      "section_type": "Part A",
+      "marks": 1,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "Imagine you are the association representative. How would you instruct the students to gather in the auditorium for the orientation? Use common phrases to give general directions."
+    },
+    {
+      "q_number": 21,
+      "unit_no": 1,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "What are the emotions and sentiments expressed by Subramania Bharati towards the land in A Patch of Land?"
+    },
+    {
+      "q_number": 22,
+      "unit_no": 1,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "Explain how does The Sparrow reflect the concept of missed opportunities in everyday life?"
+    },
+    {
+      "q_number": 23,
+      "unit_no": 1,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "Explain the three passions that guide the life of Bertrand Russel as mentioned in What I Have Lived For."
+    },
+    {
+      "q_number": 24,
+      "unit_no": 1,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "Narrate the story of how Uncle Podger succeeded in the task of hanging the picture as presented by Jerome K. Jerome in Uncle Podger Hangs a Picture."
+    },
+    {
+      "q_number": 25,
+      "unit_no": 3,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "After having read the story of Sudha Murthy's How I taught my grandmother to Read, you realise the anguish of the illiterate adults. How would you want to create an awareness with your friends and contribute something in bringing about a change in the lives of the illiterate and ways to implement Adult Education?"
+    },
+    {
+      "q_number": 26,
+      "unit_no": 3,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "The best feeling of happiness is when you are happy as you have made somebody else happy. By applying the plot of the story of Oscar Wilde's The Selfish Giant, how would you expand your ideas in surpassing the story's theme in changing a person who is selfish in your family?"
+    },
+    {
+      "q_number": 27,
+      "unit_no": 3,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "Apply the correct punctuation to be used in the following sentences below:\n1. He is not really nice looking and yet he has enormous charm\n2. When I was a child I could watch TV whenever I wanted to\n3. It is a fine idea let us hope that it is going to work\n4. Mrs. Solomon who was sitting behind the desk gave me a big smile\n5. We were believe it or not in love with each other"
+    },
+    {
+      "q_number": 28,
+      "unit_no": 3,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "Apply the grammatical rules of the parts of speech and identify the parts of speech of the italicized word in the following sentences:\n1. Sheena dances well.\n2. Ram and Sita are good friends.\n3. Oh! That was really sad.\n4. I am wearing a green dress.\n5. The teacher asked the students to stand."
+    },
+    {
+      "q_number": 29,
+      "unit_no": 4,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K4",
+      "co_level": "CO4",
+      "question_text": "Imagine a tourist asks you for directions to a famous monument in your city. Explain the best route, focusing on clarity and give other helpful details."
+    },
+    {
+      "q_number": 30,
+      "unit_no": 4,
+      "section_type": "Part B",
+      "marks": 5,
+      "k_level": "K4",
+      "co_level": "CO4",
+      "question_text": "Analyse the two different ways of giving directions using landmarks and street names in relation to writing sentence patterns in English for the workplace."
+    },
+    {
+      "q_number": 31,
+      "unit_no": 2,
+      "section_type": "Part C",
+      "marks": 10,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "How does the religious and cultural references contribute to the themes of the poem The Night of The Scorpion? Describe how the poem brings forth a strong sense of solidarity among the village folk of India?"
+    },
+    {
+      "q_number": 32,
+      "unit_no": 2,
+      "section_type": "Part C",
+      "marks": 10,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Discuss how passions influence one's life decisions in choosing the right career. Provide examples from your personal life with reference to Bertrand Russel's What I Have lived for?"
+    },
+    {
+      "q_number": 33,
+      "unit_no": 2,
+      "section_type": "Part C",
+      "marks": 10,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Explain the owl's leadership qualities and the role of other animals in following the owl towards their own destruction with reference to the text The Owl who was God."
+    },
+    {
+      "q_number": 34,
+      "unit_no": 2,
+      "section_type": "Part C",
+      "marks": 10,
+      "k_level": "K2",
+      "co_level": "CO2",
+      "question_text": "Explain the role of the children in transforming Giant's character to convey the message about the importance of human connection in Oscar Wilde's The Selfish Giant."
+    },
+    {
+      "q_number": 35,
+      "unit_no": 3,
+      "section_type": "Part D",
+      "marks": 10,
+      "k_level": "K3",
+      "co_level": "CO3",
+      "question_text": "The Sparrow addresses the theme of missed opportunities. In a busy lifestyle, personal experiences might mirror this theme by unintentionally neglecting physical and mental health. Explain how in your personal life you would have missed opportunities to care for your physical and mental health due to a busy lifestyle."
+    }
+  ]
+}
