@@ -1,0 +1,655 @@
+<?php
+/**
+ * Question Bank Commit & Persistence Handler
+ * Holy Cross College (Autonomous) - Examination System
+ * - Pure JSON Output with Output Buffering (No HTML leak)
+ * - Course Dedication & Timetable Allocation Verification
+ * - Answer Key Storage into `answer_keys` Table
+ * - Hierarchical Compressed File Storage (course_code -> semester -> year)
+ * - Duplicate Resolution (Replace, Append, Skip) & 250+ Question Appending
+ * - Clean JSON Payload Persistence with Unit, Sub-unit, K-level, CO-level
+ * - Staff to HOD / HOD to COE Workflow
+ */
+ob_start();
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/system.php';
+
+requireAuth();
+$pdo = getDBConnection();
+$user = getCurrentUser();
+
+function qps_question_norm(string $s): string {
+    $s = strip_tags($s);
+    $s = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $s);
+    $s = preg_replace('/\s+/u', ' ', trim($s));
+    return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+}
+
+try {
+    qps_ensure_aux_schema($pdo);
+    $rawInput = file_get_contents('php://input'); if (empty($rawInput)) { $rawInput = @file_get_contents('php://stdin'); }
+    $input = json_decode($rawInput, true);
+    if (!is_array($input)) throw new RuntimeException('Invalid JSON request payload.');
+
+    $questions = $input['questions'] ?? [];
+    if (count($questions) < 1) {
+        throw new RuntimeException('At least one question is required in the question bank.');
+    }
+
+    $paperCode = strtoupper(trim((string)($input['paper_code'] ?? '')));
+    $semester = trim((string)($input['semester'] ?? 'Semester 1'));
+    $academicYear = trim((string)($input['academic_year'] ?? DEFAULT_ACADEMIC_YEAR));
+    $examType = trim((string)($input['exam_type'] ?? 'Odd Semester End Examination'));
+    $regulation = trim((string)($input['regulation'] ?? DEFAULT_REGULATION));
+    $degreeLevel = trim((string)($input['degree_level'] ?? 'UG'));
+    $submitAction = trim((string)($input['submit_action'] ?? ($input['status'] ?? 'submitted_to_hod')));
+    $bankLanguage = trim((string)($input['language'] ?? 'en'));
+    $bankId = (int)($input['bank_id'] ?? 0);
+
+    if ($paperCode === '') throw new RuntimeException('Course / Paper Code is required.');
+
+    // Normalize Status
+    if ($submitAction === 'Draft' || $submitAction === 'draft') {
+        $status = 'Draft';
+    } elseif ($submitAction === 'submit_to_coe' || $submitAction === 'Approved' || isHOD() || isCOE()) {
+        $status = ($submitAction === 'submit_to_coe' || isCOE()) ? 'Submitted to COE' : 'Submitted to HOD';
+    } else {
+        $status = 'Submitted to HOD';
+    }
+
+    // -------------------------------------------------------------
+    // COURSE METADATA & DEDICATION CHECK
+    // -------------------------------------------------------------
+    $st = $pdo->prepare("SELECT c.coursecode as papercode, c.dept_code as deptcode, c.coursetitle,
+                                 c.dept_code as course_dept, c.level, c.maxmark, c.credit, c.type, d.name as dept_name
+                          FROM courses c
+                          LEFT JOIN departments d ON d.code = c.dept_code
+                          WHERE UPPER(c.coursecode) = ? LIMIT 1");
+    $st->execute([$paperCode]);
+    $course = $st->fetch(PDO::FETCH_ASSOC);
+
+    if (!$course) {
+        // Fallback search
+        $stAlt = $pdo->prepare("SELECT coursecode as papercode, dept_code as deptcode, coursetitle, dept_code as course_dept, level, maxmark, credit, type FROM courses WHERE UPPER(coursecode) LIKE ? LIMIT 1");
+        $stAlt->execute(['%' . $paperCode . '%']);
+        $course = $stAlt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    $deptCode = $course['course_dept'] ?? ($course['deptcode'] ?? ($user['dept_code'] ?? 'GEN'));
+    $deptName = $course['dept_name'] ?? $deptCode;
+    $courseTitle = $course['coursetitle'] ?? $paperCode;
+    
+    // Accurate OBE Theory (75M) vs Practical Lab (50M) vs Non-OBE (50M)
+    $examInfo = hcc_course_exam_info($course);
+    $isNonObe = ($examInfo['type_label'] !== 'OBE Theory (75M)');
+    $maxMarks = (int)$examInfo['marks'];
+
+    // Filter and normalize questions based on replace_action
+    $finalQuestions = [];
+    $seen = [];
+    $duplicateWarnings = [];
+    $numCounter = 1;
+
+    foreach ($questions as $i => $q) {
+        $action = $q['replace_action'] ?? 'append';
+        if ($action === 'skip') {
+            continue; // Skip duplicate
+        }
+
+        $qText = trim((string)($q['question_text'] ?? ''));
+        if ($qText === '') continue;
+
+        $unitRaw = trim((string)($q['unit_no'] ?? ''));
+        $unit = (int)$unitRaw;
+        if ($unit < 1 || $unit > 5) {
+            $suProbe = trim((string)($q['sub_unit'] ?? ''));
+            $unit = (preg_match('/^([1-5])\./', $suProbe, $um) ? (int)$um[1] : 1);
+        }
+        $subUnit = trim((string)($q['sub_unit'] ?? ''));
+        if ($subUnit === '') $subUnit = "{$unit}.1";
+        $kLevel = strtoupper(trim((string)($q['k_level'] ?? '')));
+        if (!preg_match('/^K[1-6]$/', $kLevel)) $kLevel = 'K1';
+        $kNum = preg_match('/K([1-6])/i', $kLevel, $km) ? (int)$km[1] : 1;
+        $kNorm = 'K' . $kNum;
+
+        // Explicit staff/source CO is authoritative. Do not derive CO from K-Level.
+        $coNorm = strtoupper(trim((string)($q['co_level'] ?? $q['co'] ?? '')));
+        if (!preg_match('/^CO[1-9][0-9]*$/', $coNorm)) {
+            $coNorm = '';
+        }
+
+        $marksRaw = trim((string)($q['marks'] ?? ''));
+        $marks = $marksRaw === '' ? 0 : (int)$marksRaw;
+        if ($marks < 0 || $marks > 100) $marks = 0;
+        $sec = strtoupper(trim((string)($q['section_type'] ?? $q['section'] ?? '')));
+        if ($sec !== '' && preg_match('/^([A-D])$/', $sec, $sm)) $sec = 'SECTION-' . $sm[1];
+        $ansKey = trim((string)($q['answer_key'] ?? ''));
+        $optArr = !empty($q['options']) && is_array($q['options']) ? $q['options'] : [];
+        $optJson = !empty($optArr) ? json_encode($optArr, JSON_UNESCAPED_UNICODE) : null;
+        $formula = (string)($q['formula_latex'] ?? '');
+        $img = (string)($q['image_url'] ?? '');
+        $hasFormula = (!empty($q['has_formula']) || strpos($qText, '$') !== false || $formula !== '') ? 1 : 0;
+        $lang = trim((string)($q['language'] ?? $bankLanguage));
+        $importSchema = trim((string)($q['import_schema'] ?? 'legacy'));
+        $parserVersion = trim((string)($q['parser_version'] ?? ($importSchema === 'staff-v4' ? 'php-staff-v4' : 'php-legacy')));
+        $parserConfidence = isset($q['parser_confidence']) ? (float)$q['parser_confidence'] : 1.0;
+        $validationStatus = $parserConfidence < 0.75 ? 'REVIEW_REQUIRED' : 'VALID';
+        $normalizedText = qps_question_norm($qText);
+        $questionHash = hash('sha256', $normalizedText);
+
+        if ($importSchema === 'staff-v4') {
+            $required = ['unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'];
+            foreach ($required as $rf) {
+                if (!isset($q[$rf]) || trim((string)$q[$rf]) === '') {
+                    throw new RuntimeException('Question #' . (int)($q['q_number'] ?? 0) . ' is missing required field: ' . $rf . '.');
+                }
+            }
+            if (!preg_match('/^CO[1-9][0-9]*$/i', $coNorm)) throw new RuntimeException('Question #' . (int)($q['q_number'] ?? 0) . ' has an invalid CO.');
+        }
+
+        $sourceQNo = (int)($q['q_number'] ?? $q['source_q_number'] ?? 0);
+        if ($sourceQNo <= 0) $sourceQNo = $numCounter;
+        $item = [
+            'q_number' => $sourceQNo,
+            'unit_no' => $unit,
+            'sub_unit' => $subUnit,
+            'section_type' => $sec,
+            'marks' => $marks,
+            'k_level' => $kNorm,
+            'co_level' => $coNorm,
+            'question_text' => $qText,
+            'answer_key' => $ansKey,
+            'options' => $optArr,
+            'options_json' => $optJson,
+            'language' => $lang,
+            'has_formula' => $hasFormula,
+            'formula_latex' => $formula,
+            'image_url' => $img,
+            'replace_action' => $action,
+            'import_schema' => $importSchema,
+            'parser_version' => $parserVersion,
+            'parser_confidence' => $parserConfidence,
+            'validation_status' => $validationStatus,
+            'normalized_text' => $normalizedText,
+            'question_hash' => $questionHash,
+            'source_question_no' => $sourceQNo,
+            'existing_id' => $q['duplicate_info']['existing_id'] ?? null
+        ];
+
+        // Track duplicates
+        $h = hash('sha256', qps_question_norm($qText));
+        if (isset($seen[$h])) {
+            $duplicateWarnings[] = "Question #{$item['q_number']} duplicates Question #{$seen[$h]} in this upload.";
+        } else {
+            $seen[$h] = $item['q_number'];
+        }
+
+        $finalQuestions[] = $item;
+        $numCounter = max($numCounter + 1, $sourceQNo + 1);
+    }
+
+    if (empty($finalQuestions)) {
+        throw new RuntimeException('No valid questions remain after duplicate filtering.');
+    }
+
+    // V28: faculty submissions live in the draft table until HOD verification.
+    if (!$isCoe && !$isHod) {
+        $qbbId=(int)($input['qbb_id']??0); $qbbChecked=!empty($input['qbb_checked'])?1:0; $qbbResult=$input['qbb_result']??null;
+        $activeQbb=null;
+        try{$qs=$pdo->prepare("SELECT * FROM question_bank_blueprints WHERE status='PUBLISHED' AND qbb_enabled=1 AND UPPER(paper_code)=UPPER(?) AND (semester=? OR semester IS NULL OR semester='') AND (academic_year=? OR academic_year IS NULL OR academic_year='') AND (exam_type=? OR exam_type IS NULL OR exam_type='') ORDER BY published_at DESC,id DESC LIMIT 1");$qs->execute([$paperCode,$semester,$academicYear,$examType]);$activeQbb=$qs->fetch(PDO::FETCH_ASSOC)?:null;}catch(Throwable $e){}
+        if($activeQbb){
+            $matrix=json_decode((string)$activeQbb['matrix_json'],true);if(!is_array($matrix))$matrix=[];$reqSub=[];$reqUnit=[];$gotSub=[];$gotUnit=[];
+            foreach($matrix as $r){$su=(string)($r['sub_unit']??'');$u=(int)($r['unit']??0);$n=(int)($r['required_count']??0);$reqSub[$su]=($reqSub[$su]??0)+$n;$reqUnit[$u]=($reqUnit[$u]??0)+$n;}
+            foreach($finalQuestions as $q){$u=(int)($q['unit_no']??0);$su=(string)($q['sub_unit']??($u.'.1'));$gotSub[$su]=($gotSub[$su]??0)+1;$gotUnit[$u]=($gotUnit[$u]??0)+1;}
+            $errs=[];foreach($reqSub as $su=>$n){$a=(int)($gotSub[$su]??0);if($a<$n)$errs[]="Sub-Unit {$su}: blueprint requires {$n}, but uploaded bank contains only {$a}.";}foreach($reqUnit as $u=>$n){$a=(int)($gotUnit[$u]??0);if($a<$n)$errs[]="Unit {$u}: blueprint requires {$n}, but uploaded bank contains only {$a}.";}if($errs)throw new RuntimeException('Blueprint validation failed: '.implode(' | ',$errs));$qbbId=(int)$activeQbb['id'];$qbbChecked=1;$qbbResult=['enabled'=>true,'valid'=>true,'blueprint_id'=>$qbbId,'errors'=>[]];
+        }
+        $semNum=hcc_sem_num($semester);$safeYear=preg_replace('/[^a-zA-Z0-9_-]/','_',$academicYear?:'2026-2027');$safeCode=preg_replace('/[^a-zA-Z0-9_-]/','_',$paperCode);$safeSem='sem_'.$semNum;$dir=BASE_PATH.'/storage/uploads/'.$safeCode.'/'.$safeSem.'/'.$safeYear;if(!is_dir($dir))@mkdir($dir,0777,true);@mkdir($dir.'/DOCS',0777,true);@mkdir($dir.'/GENERATED PAPERS',0777,true);@mkdir($dir.'/BLUEPRINTS',0777,true);
+        $source=$_SESSION['qps_upload_token']??[];$sourceName=$source['name']??($input['source_file_name']??('Question_Bank_'.$paperCode));$sourceExt=$source['ext']??strtolower(pathinfo($sourceName,PATHINFO_EXTENSION));$archiveRel='';$stamp=date('Ymd_His');
+        if(!empty($source['path'])&&is_file($source['path'])){$safeSrc=preg_replace('/[^a-zA-Z0-9._-]/','_',basename($sourceName));$dest=$dir.'/'.$safeCode.'_'.$safeSem.'_'.$stamp.'_'.$safeSrc;if(@copy($source['path'],$dest)){ $archiveRel='storage/uploads/'.$safeCode.'/'.$safeSem.'/'.$safeYear.'/'.basename($dest); @copy($source['path'],$dir.'/DOCS/'.basename($dest)); }}
+        $payload=['schema_version'=>'5.0-draft','metadata'=>['staff_code'=>$user['staff_code']??'STAFF','staff_name'=>$user['name']??'','dept_code'=>$deptCode,'dept_name'=>$deptName,'paper_code'=>$paperCode,'course_title'=>$courseTitle,'semester'=>$semester,'academic_year'=>$academicYear,'exam_type'=>$examType,'regulation'=>$regulation,'degree_level'=>$degreeLevel,'max_marks'=>$maxMarks,'language'=>$bankLanguage,'total_questions'=>count($finalQuestions)],'questions'=>$finalQuestions];$json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);@file_put_contents($dir.'/'.$safeCode.'_'.$safeSem.'_'.$safeYear.'_draft_'.$stamp.'.json',$json);if(function_exists('gzencode'))@file_put_contents($dir.'/'.$safeCode.'_'.$safeSem.'_'.$safeYear.'_draft_'.$stamp.'.json.gz',gzencode($json,9));
+        qps_ensure_question_draft_schema($pdo);$status=$submitAction==='submit_to_hod'?'SUBMITTED_TO_HOD':'DRAFT';$now=date('Y-m-d H:i:s');$draftId=(int)($input['draft_id']??0);
+        if($draftId>0){$st=$pdo->prepare("UPDATE qps_question_bank_drafts SET dept_code=?,dept_name=?,paper_code=?,course_title=?,semester=?,academic_year=?,exam_type=?,regulation=?,degree_level=?,max_marks=?,total_questions=?,status=?,source_format=?,source_file_name=?,source_path=?,archive_path=?,questions_json=?,qbb_id=?,qbb_checked=?,qbb_check_result_json=?,qbb_checked_at=?,submitted_at=? WHERE id=? AND staff_code=?");$st->execute([$deptCode,$deptName,$paperCode,$courseTitle,$semester,$academicYear,$examType,$regulation,$degreeLevel,$maxMarks,count($finalQuestions),$status,$sourceExt,$sourceName,$archiveRel,$archiveRel,$json,$qbbId,$qbbChecked,json_encode($qbbResult,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$qbbChecked?$now:null,$status==='SUBMITTED_TO_HOD'?$now:null,$draftId,$user['staff_code']]);if($st->rowCount()===0)throw new RuntimeException('Draft not found or you do not own this draft.');}
+        else{$st=$pdo->prepare("INSERT INTO qps_question_bank_drafts (staff_code,dept_code,dept_name,paper_code,course_title,semester,academic_year,exam_type,regulation,degree_level,max_marks,total_questions,status,source_format,source_file_name,source_path,archive_path,questions_json,qbb_id,qbb_checked,qbb_check_result_json,qbb_checked_at,submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");$st->execute([$user['staff_code']??'STAFF',$deptCode,$deptName,$paperCode,$courseTitle,$semester,$academicYear,$examType,$regulation,$degreeLevel,$maxMarks,count($finalQuestions),$status,$sourceExt,$sourceName,$archiveRel,$archiveRel,$json,$qbbId,$qbbChecked,json_encode($qbbResult,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$qbbChecked?$now:null,$status==='SUBMITTED_TO_HOD'?$now:null]);$draftId=(int)$pdo->lastInsertId();}
+        if(!empty($source['path']))@unlink($source['path']);unset($_SESSION['qps_upload_token']);
+        ob_end_clean();echo json_encode(['success'=>true,'draft_id'=>$draftId,'status'=>$status,'total_questions'=>count($finalQuestions),'archive_path'=>$archiveRel,'message'=>$status==='SUBMITTED_TO_HOD'?'Question Bank stored in HOD draft queue. No master questions were created yet.':'Question Bank draft saved.'],JSON_UNESCAPED_UNICODE);exit;
+    }
+
+    // -------------------------------------------------------------
+    // HIERARCHICAL COMPRESSED FILE STORAGE
+    // -------------------------------------------------------------
+    $semNum = hcc_sem_num($semester);
+    $safeYear = preg_replace('/[^a-zA-Z0-9_-]/', '_', $academicYear ?: '2026-2027');
+    $safeCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paperCode);
+    $safeSem = 'sem_' . $semNum;
+
+    $hierarchicalDir = BASE_PATH . '/storage/uploads/' . $safeCode . '/' . $safeSem . '/' . $safeYear;
+    if (!is_dir($hierarchicalDir)) {
+        @mkdir($hierarchicalDir, 0777, true);
+    }
+    @mkdir($hierarchicalDir . '/DOCS', 0777, true);
+    @mkdir($hierarchicalDir . '/GENERATED PAPERS', 0777, true);
+    @mkdir($hierarchicalDir . '/BLUEPRINTS', 0777, true);
+
+    $source = $_SESSION['qps_upload_token'] ?? [];
+    $sourceName = $source['name'] ?? ($input['source_file_name'] ?? 'Question_Bank_' . $paperCode);
+    $sourceExt = $source['ext'] ?? strtolower(pathinfo($sourceName, PATHINFO_EXTENSION));
+    $ocrUsed = !empty($source['ocr_used']) ? 1 : 0;
+    $ocrLang = $source['ocr_language'] ?? 'eng';
+
+    $archiveRelPath = '';
+    $timestamp = date('Ymd_His');
+
+    if (!empty($source['path']) && is_file($source['path'])) {
+        $safeSrcBase = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($sourceName));
+        $destFile = $hierarchicalDir . '/' . $safeCode . '_' . $safeSem . '_' . $timestamp . '_' . $safeSrcBase;
+        if (@copy($source['path'], $destFile)) {
+            $archiveRelPath = 'storage/uploads/' . $safeCode . '/' . $safeSem . '/' . $safeYear . '/' . basename($destFile);
+            @copy($source['path'], $hierarchicalDir . '/DOCS/' . basename($destFile));
+        }
+    }
+
+    // Generate JSON archive
+    $jsonArchiveName = $safeCode . '_' . $safeSem . '_' . $safeYear . '_bank.json';
+    $jsonArchivePath = $hierarchicalDir . '/' . $jsonArchiveName;
+
+    $jsonPayload = [
+        'schema_version' => '4.0',
+        'institution' => COLLEGE_NAME,
+        'metadata' => [
+            'staff_code' => $user['staff_code'] ?? 'STAFF',
+            'staff_name' => $user['name'] ?? '',
+            'dept_code' => $deptCode,
+            'dept_name' => $deptName,
+            'paper_code' => $paperCode,
+            'course_title' => $courseTitle,
+            'semester' => $semester,
+            'academic_year' => $academicYear,
+            'exam_type' => $examType,
+            'regulation' => $regulation,
+            'degree_level' => $degreeLevel,
+            'max_marks' => $maxMarks,
+            'language' => $bankLanguage,
+            'total_questions' => count($finalQuestions),
+            'status' => $status,
+            'created_at' => date('Y-m-d H:i:s'),
+            'schema' => [
+                'question_fields' => ['q_number','unit_no','sub_unit','k_level','co_level','section_type','marks','question_text'],
+                'relational_source_of_truth' => true,
+                'json_role' => 'immutable_reproducibility_snapshot'
+            ]
+        ],
+        'questions' => $finalQuestions,
+        'integrity' => [
+            'hash_algorithm' => 'sha256',
+            'content_hash' => null
+        ]
+    ];
+
+    $jsonRaw = json_encode($jsonPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    @file_put_contents($jsonArchivePath, $jsonRaw);
+
+    if (function_exists('gzencode')) {
+        $gzPath = $jsonArchivePath . '.gz';
+        @file_put_contents($gzPath, gzencode($jsonRaw, 9));
+    }
+
+    if (!$archiveRelPath) {
+        $archiveRelPath = 'storage/uploads/' . $safeCode . '/' . $safeSem . '/' . $safeYear . '/' . $jsonArchiveName;
+    }
+
+    $contentHash = hash('sha256', $jsonRaw);
+
+    // -------------------------------------------------------------
+    // DATABASE TRANSACTION & PERSISTENCE
+    // -------------------------------------------------------------
+    $pdo->beginTransaction();
+    $now = date('Y-m-d H:i:s');
+    $importId = null;
+    try {
+        $importStmt = $pdo->prepare("INSERT INTO qps_imports (
+            bank_id, token_hash, source_file_name, source_format, file_size_bytes,
+            parser_version, schema_version, detected_language, ocr_used,
+            total_questions, duplicate_questions, warning_count, low_confidence_count,
+            status, diagnostics_json, created_by, created_at
+        ) VALUES (NULL, ?, ?, ?, ?, ?, '4.0', ?, ?, ?, ?, ?, ?, 'VALIDATED', ?, ?, ?)");
+        $parserVersionForImport = !empty($finalQuestions[0]['parser_version']) ? $finalQuestions[0]['parser_version'] : 'php-legacy';
+        $warningCountForImport = 0;
+        $lowConfidenceForImport = 0;
+        foreach ($questions as $iq) {
+            $warningCountForImport += count($iq['warnings'] ?? []);
+            if ((float)($iq['parser_confidence'] ?? 1) < 0.75) $lowConfidenceForImport++;
+        }
+        $importDiagnostics = [
+            'parser_version' => $parserVersionForImport,
+            'schema_version' => '4.0',
+            'question_count' => count($questions),
+            'duplicate_warnings' => count($duplicateWarnings),
+            'warning_count' => $warningCountForImport,
+            'low_confidence_count' => $lowConfidenceForImport
+        ];
+        $importStmt->execute([
+            hash('sha256', (string)($source['token'] ?? '')),
+            $sourceName,
+            $sourceExt,
+            (int)($source['size'] ?? 0),
+            $parserVersionForImport,
+            $bankLanguage,
+            $ocrUsed,
+            count($questions),
+            count($duplicateWarnings),
+            $warningCountForImport,
+            $lowConfidenceForImport,
+            json_encode($importDiagnostics, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $user['staff_code'] ?? 'SYSTEM',
+            $now
+        ]);
+        $importId = (int)$pdo->lastInsertId();
+    } catch (Throwable $e) {
+        // Older installations may not yet have qps_imports; the core bank commit remains usable.
+        $importId = null;
+    }
+
+    // Find existing question bank
+    if (!$bankId) {
+        $stFind = $pdo->prepare("SELECT id, root_bank_id, version_no FROM question_banks WHERE UPPER(paper_code) = UPPER(?) AND semester = ? AND academic_year = ? ORDER BY id DESC LIMIT 1");
+        $stFind->execute([$paperCode, $semester, $academicYear]);
+        $found = $stFind->fetch(PDO::FETCH_ASSOC);
+        if ($found) {
+            $bankId = (int)$found['id'];
+        }
+    }
+
+    // Existing pool is retained for append/replace uploads. Existing question IDs
+    // are preserved so question-usage history from previous examination years remains valid.
+    $existingRows = [];
+    if ($bankId) {
+        $stExisting = $pdo->prepare("SELECT * FROM questions WHERE bank_id = ? ORDER BY q_number ASC");
+        $stExisting->execute([$bankId]);
+        $existingRows = $stExisting->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $existingById = [];
+    $maxExistingNumber = 0;
+    foreach ($existingRows as $er) {
+        $existingById[(int)$er['id']] = $er;
+        $maxExistingNumber = max($maxExistingNumber, (int)$er['q_number']);
+    }
+
+    // Merge uploaded questions into the current pool.
+    $merged = [];
+    $replacedIds = [];
+    foreach ($existingRows as $er) {
+        $merged[(int)$er['id']] = [
+            'id' => (int)$er['id'],
+            'q_number' => (int)$er['q_number'],
+            'unit_no' => (int)$er['unit_no'],
+            'sub_unit' => $er['sub_unit'] ?: '1.1',
+            'section_type' => $er['section_type'] ?: 'SECTION-A',
+            'marks' => (int)$er['marks'],
+            'k_level' => $er['k_level'] ?: 'K1',
+            'co_level' => $er['co_level'] ?: ('CO' . preg_replace('/\D+/', '', (string)$er['k_level'])),
+            'question_text' => $er['question_text'],
+            'answer_key' => $er['answer_key'] ?: '',
+            'options' => json_decode((string)($er['options_json'] ?? ''), true) ?: [],
+            'options_json' => $er['options_json'] ?: null,
+            'language' => $er['language'] ?: $bankLanguage,
+            'has_formula' => (int)($er['has_formula'] ?? 0),
+            'formula_latex' => $er['formula_latex'] ?: '',
+            'image_url' => $er['image_url'] ?: '',
+            'replace_action' => 'existing'
+        ];
+    }
+
+    foreach ($finalQuestions as $fq) {
+        $existingId = (int)($fq['existing_id'] ?? 0);
+        $action = $fq['replace_action'] ?? 'append';
+        if ($action === 'skip') continue;
+
+        if ($action === 'replace' && $existingId > 0 && isset($merged[$existingId])) {
+            $fq['id'] = $existingId;
+            $fq['q_number'] = $merged[$existingId]['q_number'];
+            $merged[$existingId] = $fq;
+            $replacedIds[$existingId] = true;
+        } else {
+            $fq['id'] = null;
+            $fq['q_number'] = ++$maxExistingNumber;
+            $merged[] = $fq;
+        }
+    }
+
+    // Sort by question number and ensure the JSON/relational order is deterministic.
+    $finalQuestions = array_values($merged);
+    usort($finalQuestions, static function($a,$b){ return ((int)$a['q_number']) <=> ((int)$b['q_number']); });
+
+    if (!$bankId) {
+        $version = 1;
+        $stIns = $pdo->prepare("INSERT INTO question_banks (
+            staff_code, dept_code, dept_name, paper_code, course_title,
+            semester, academic_year, exam_type, regulation, degree_level,
+            max_marks, total_questions, status, questions_json, created_at,
+            updated_at, submitted_at, source_format, source_file_name,
+            source_path, archive_path, language, ocr_language, ocr_used,
+            content_hash, version_no
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // JSON is finalized after relational IDs are populated; save a provisional snapshot now.
+        $stIns->execute([
+            $user['staff_code'] ?? 'STAFF', $deptCode, $deptName, $paperCode, $courseTitle,
+            $semester, $academicYear, $examType, $regulation, $degreeLevel,
+            $maxMarks, count($finalQuestions), $status, $jsonRaw, $now,
+            $now, ($status !== 'Draft' ? $now : null), $sourceExt, $sourceName,
+            $archiveRelPath, $archiveRelPath, $bankLanguage, $ocrLang, $ocrUsed,
+            $contentHash, 1
+        ]);
+        $bankId = (int)$pdo->lastInsertId();
+        $pdo->prepare("UPDATE question_banks SET root_bank_id = ? WHERE id = ?")->execute([$bankId, $bankId]);
+        $version = 1;
+    } else {
+        $stOld = $pdo->prepare("SELECT version_no, root_bank_id FROM question_banks WHERE id = ?");
+        $stOld->execute([$bankId]);
+        $old = $stOld->fetch(PDO::FETCH_ASSOC);
+        if (!$old) throw new RuntimeException('Question bank not found. Please refresh the repository and upload again.');
+        $version = (int)($old['version_no'] ?? 1) + 1;
+        $rootId = (int)($old['root_bank_id'] ?: $bankId);
+
+        // IMPORTANT: no duplicate `language = ...` assignment. This was the source of
+        // the HY093 error in the previous build.
+        $stUp = $pdo->prepare("UPDATE question_banks SET
+            staff_code = ?, dept_code = ?, dept_name = ?, paper_code = ?,
+            course_title = ?, semester = ?, academic_year = ?, exam_type = ?,
+            regulation = ?, degree_level = ?, max_marks = ?, total_questions = ?,
+            status = ?, updated_at = ?, submitted_at = ?,
+            source_format = ?, source_file_name = ?, source_path = ?, archive_path = ?,
+            language = ?, ocr_language = ?, ocr_used = ?, content_hash = ?,
+            version_no = ?, root_bank_id = ?
+            WHERE id = ?");
+        $stUp->execute([
+            $user['staff_code'] ?? 'STAFF', $deptCode, $deptName, $paperCode,
+            $courseTitle, $semester, $academicYear, $examType,
+            $regulation, $degreeLevel, $maxMarks, count($finalQuestions),
+            $status, $now, ($status !== 'Draft' ? $now : null),
+            $sourceExt, $sourceName, $archiveRelPath, $archiveRelPath,
+            $bankLanguage, $ocrLang, $ocrUsed, $contentHash, $version, $rootId, $bankId
+        ]);
+    }
+
+    // Upsert relational questions without destroying old IDs used by examination history.
+    $stQIns = $pdo->prepare("INSERT INTO questions (
+        bank_id, q_number, unit_no, sub_unit, section_type, question_text,
+        marks, k_level, co_level, question_type, has_formula, formula_latex, image_url,
+        options_json, answer_key, language, created_at,
+        source_question_no, import_schema, parser_version, parser_confidence,
+        validation_status, normalized_text, question_hash
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stQUpd = $pdo->prepare("UPDATE questions SET
+        q_number=?, unit_no=?, sub_unit=?, section_type=?, question_text=?, marks=?,
+        k_level=?, co_level=?, question_type=?, has_formula=?, formula_latex=?, image_url=?,
+        options_json=?, answer_key=?, language=?,
+        source_question_no=?, import_schema=?, parser_version=?, parser_confidence=?,
+        validation_status=?, normalized_text=?, question_hash=?
+        WHERE id=? AND bank_id=?");
+
+    $activeIds=[];
+    foreach ($finalQuestions as &$fq) {
+        $opts = !empty($fq['options']) && is_array($fq['options']) ? $fq['options'] : [];
+        $fq['options_json'] = !empty($opts) ? json_encode($opts, JSON_UNESCAPED_UNICODE) : null;
+        // Explicit CO from the staff/source record is authoritative. Never infer CO from K-Level here.
+        if (!preg_match('/^CO[1-9][0-9]*$/i', (string)($fq['co_level'] ?? ''))) {
+            throw new RuntimeException('Invalid or missing CO for question #' . (int)($fq['q_number'] ?? 0) . '. Please correct the staff template before saving.');
+        }
+        $fq['co_level'] = strtoupper(trim((string)$fq['co_level']));
+        if (!empty($fq['id']) && isset($existingById[(int)$fq['id']])) {
+            $stQUpd->execute([
+                $fq['q_number'],$fq['unit_no'],$fq['sub_unit'],$fq['section_type'],$fq['question_text'],$fq['marks'],
+                $fq['k_level'],$fq['co_level'],strtoupper(trim((string)($fq['question_type'] ?? ''))),$fq['has_formula'],$fq['formula_latex'],$fq['image_url'],
+                $fq['options_json'],$fq['answer_key'],$fq['language'],
+                (int)($fq['source_question_no'] ?? $fq['q_number']),
+                $fq['import_schema'] ?? 'legacy',
+                $fq['parser_version'] ?? 'php-legacy',
+                (float)($fq['parser_confidence'] ?? 1),
+                $fq['validation_status'] ?? 'VALID',
+                $fq['normalized_text'] ?? qps_question_norm((string)$fq['question_text']),
+                $fq['question_hash'] ?? hash('sha256', qps_question_norm((string)$fq['question_text'])),
+                (int)$fq['id'],$bankId
+            ]);
+            $qId=(int)$fq['id'];
+        } else {
+            $stQIns->execute([
+                $bankId,$fq['q_number'],$fq['unit_no'],$fq['sub_unit'],$fq['section_type'],$fq['question_text'],
+                $fq['marks'],$fq['k_level'],$fq['co_level'],strtoupper(trim((string)($fq['question_type'] ?? ''))),$fq['has_formula'],$fq['formula_latex'],$fq['image_url'],
+                $fq['options_json'],$fq['answer_key'],$fq['language'],$now,
+                (int)($fq['source_question_no'] ?? $fq['q_number']),
+                $fq['import_schema'] ?? 'legacy',
+                $fq['parser_version'] ?? 'php-legacy',
+                (float)($fq['parser_confidence'] ?? 1),
+                $fq['validation_status'] ?? 'VALID',
+                $fq['normalized_text'] ?? qps_question_norm((string)$fq['question_text']),
+                $fq['question_hash'] ?? hash('sha256', qps_question_norm((string)$fq['question_text']))
+            ]);
+            $qId=(int)$pdo->lastInsertId();
+            $fq['id']=$qId;
+        }
+        $activeIds[$qId]=true;
+    }
+    unset($fq);
+
+    // Refresh answer-key rows only; question rows/IDs remain stable.
+    $pdo->prepare("DELETE FROM answer_keys WHERE bank_id = ?")->execute([$bankId]);
+    $stAK = $pdo->prepare("INSERT INTO answer_keys (
+        course_code, question_id, bank_id, q_number, unit_no, sub_unit,
+        section_type, k_level, co_level, answer_key, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    foreach ($finalQuestions as $fq) {
+        if ($fq['answer_key'] === '') continue;
+        $stAK->execute([
+            $paperCode,(int)$fq['id'],$bankId,$fq['q_number'],$fq['unit_no'],$fq['sub_unit'],
+            $fq['section_type'],$fq['k_level'],$fq['co_level'],$fq['answer_key'],$now,$now
+        ]);
+    }
+
+    // Save final questions JSON with populated relational IDs.
+    $jsonPayload['metadata']['total_questions']=count($finalQuestions);
+    $jsonPayload['questions']=$finalQuestions;
+    $integrityBasis = json_encode([
+        'metadata' => $jsonPayload['metadata'],
+        'questions' => $jsonPayload['questions']
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $jsonPayload['integrity']['content_hash'] = hash('sha256', (string)$integrityBasis);
+    $finalJsonStr=json_encode($jsonPayload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
+    @file_put_contents($jsonArchivePath, $finalJsonStr);
+    if (function_exists('gzencode')) @file_put_contents($jsonArchivePath . '.gz', gzencode($finalJsonStr, 9));
+    $finalContentHash=hash('sha256',$finalJsonStr);
+    $pdo->prepare("UPDATE question_banks SET questions_json = ?, content_hash = ?, total_questions = ?, version_no = ?, schema_version = ? WHERE id = ?")->execute([$finalJsonStr,$finalContentHash,count($finalQuestions),$version,'4.0',$bankId]);
+
+    // Immutable bank snapshot: relational rows are the query source; this JSON is the
+    // reproducible version archive used for rollback/export/audit.
+    try {
+        $pdo->prepare("INSERT INTO qps_bank_versions (
+            bank_id, version_no, schema_version, questions_json, metadata_json,
+            source_file_name, source_format, source_path, ocr_language, ocr_used,
+            question_count, content_hash, created_by, created_at
+        ) VALUES (?, ?, '4.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        ->execute([
+            $bankId, $version, $finalJsonStr,
+            json_encode($jsonPayload['metadata'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $sourceName, $sourceExt, $archiveRelPath, $ocrLang, $ocrUsed,
+            count($finalQuestions), $finalContentHash,
+            $user['staff_code'] ?? 'SYSTEM', $now
+        ]);
+    } catch (Throwable $e) {
+        // Backward-compatible fallback for the older qps_bank_versions schema.
+        $pdo->prepare("INSERT INTO qps_bank_versions (
+            bank_id, version_no, questions_json, source_file_name, source_format,
+            source_path, ocr_language, ocr_used, content_hash, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        ->execute([
+            $bankId, $version, $finalJsonStr, $sourceName, $sourceExt,
+            $archiveRelPath, $ocrLang, $ocrUsed, $finalContentHash,
+            $user['staff_code'] ?? 'SYSTEM', $now
+        ]);
+    }
+
+    if ($importId) {
+        $pdo->prepare("UPDATE qps_imports SET bank_id = ?, status = 'COMMITTED', completed_at = ? WHERE id = ?")
+            ->execute([$bankId, $now, $importId]);
+        try {
+            $pdo->prepare("UPDATE question_banks SET last_import_id = ?, current_version_id = (
+                SELECT id FROM qps_bank_versions WHERE bank_id = ? AND version_no = ? ORDER BY id DESC LIMIT 1
+            ) WHERE id = ?")->execute([$importId, $bankId, $version, $bankId]);
+        } catch (Throwable $e) {}
+    }
+
+    $pdo->prepare("INSERT INTO qps_upload_history (
+        bank_id, staff_code, action, source_file_name, source_format,
+        question_count, ocr_used, message, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    ->execute([
+        $bankId, $user['staff_code'] ?? 'SYSTEM',
+        $version > 1 ? 'REUPLOAD' : 'UPLOAD',
+        $sourceName, $sourceExt, count($finalQuestions), $ocrUsed,
+        'PHP v4 import committed successfully. JSON snapshot archived as version ' . $version . '.',
+        $now
+    ]);
+
+    try {
+        qps_audit($pdo, $version > 1 ? 'QUESTION_BANK_REUPLOAD' : 'QUESTION_BANK_UPLOAD', 'QUESTION_BANK', (string)$bankId, [
+            'version' => $version,
+            'question_count' => count($finalQuestions),
+            'parser_version' => $finalQuestions[0]['parser_version'] ?? 'php-legacy',
+            'schema_version' => '4.0',
+            'source_format' => $sourceExt
+        ]);
+    } catch (Throwable $e) {}
+
+    $pdo->commit();
+
+    if (!empty($source['path'])) @unlink($source['path']);
+    unset($_SESSION['qps_upload_token']);
+
+    $statusMsg = ($status === 'Submitted to COE')
+        ? 'Question Bank approved and submitted to COE Office for paper generation!'
+        : (($status === 'Submitted to HOD')
+            ? 'Question Bank submitted to Head of Department (HOD) for review and verification.'
+            : 'Question Bank draft saved successfully.');
+
+    ob_end_clean();
+    echo json_encode([
+        'success' => true,
+        'bank_id' => $bankId,
+        'version_no' => $version,
+        'status' => $status,
+        'total_questions' => count($finalQuestions),
+        'archive_path' => $archiveRelPath,
+        'warnings' => $duplicateWarnings,
+        'message' => $statusMsg
+    ], JSON_UNESCAPED_UNICODE);
+
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    ob_end_clean();
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+}
+?>
