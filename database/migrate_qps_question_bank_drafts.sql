@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS qps_question_bank_drafts (
+id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, staff_code VARCHAR(100) NOT NULL, dept_code VARCHAR(50) NULL, dept_name VARCHAR(255) NULL, paper_code VARCHAR(100) NOT NULL, course_title VARCHAR(255) NULL, semester VARCHAR(50) NOT NULL, academic_year VARCHAR(20) NOT NULL, exam_type VARCHAR(120) NOT NULL, regulation VARCHAR(80) NULL, degree_level VARCHAR(30) NULL, max_marks INT NOT NULL DEFAULT 75, total_questions INT NOT NULL DEFAULT 0, status VARCHAR(30) NOT NULL DEFAULT 'DRAFT', promoted_bank_id BIGINT UNSIGNED NULL, source_format VARCHAR(20) NULL, source_file_name VARCHAR(255) NULL, source_path VARCHAR(700) NULL, archive_path VARCHAR(700) NULL, questions_json LONGTEXT NOT NULL, qbb_id BIGINT UNSIGNED NULL, qbb_checked TINYINT(1) NOT NULL DEFAULT 0, qbb_check_result_json LONGTEXT NULL, qbb_checked_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, submitted_at DATETIME NULL, hod_reviewed_by VARCHAR(100) NULL, hod_reviewed_at DATETIME NULL, review_comments TEXT NULL, PRIMARY KEY(id), KEY idx_course(paper_code,semester,academic_year), KEY idx_staff(staff_code), KEY idx_status(status), KEY idx_qbb(qbb_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS qps_question_bank_draft_questions (
+id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, draft_id BIGINT UNSIGNED NULL, bank_id BIGINT UNSIGNED NULL, q_number INT NOT NULL DEFAULT 0, unit_no INT NOT NULL DEFAULT 0, sub_unit VARCHAR(50) NULL, section_type VARCHAR(50) NULL, question_type VARCHAR(50) NULL, question_text LONGTEXT NOT NULL, marks INT NOT NULL DEFAULT 0, k_level VARCHAR(20) NULL, co_level VARCHAR(20) NULL, options_json LONGTEXT NULL, answer_key TEXT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), KEY idx_draft(draft_id), KEY idx_bank(bank_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Existing installations: retain drafts through COE review and link to promoted master bank.
+ALTER TABLE qps_question_bank_drafts MODIFY status VARCHAR(30) NOT NULL DEFAULT 'DRAFT';
+SET @promoted_col_exists := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='qps_question_bank_drafts' AND COLUMN_NAME='promoted_bank_id');
+SET @promoted_col_sql := IF(@promoted_col_exists=0, 'ALTER TABLE qps_question_bank_drafts ADD COLUMN promoted_bank_id BIGINT UNSIGNED NULL AFTER status', 'SELECT 1');
+PREPARE promoted_col_stmt FROM @promoted_col_sql;
+EXECUTE promoted_col_stmt;
+DEALLOCATE PREPARE promoted_col_stmt;

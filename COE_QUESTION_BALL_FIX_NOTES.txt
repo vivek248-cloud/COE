@@ -1,0 +1,22 @@
+COE question-ball and eligibility fix
+======================================
+
+Updated: modules/coe/blueprint.php
+
+Changes:
+- Question balls 21-25 now resolve to Section B paragraph questions (5M).
+- Question balls 26-28 now resolve to Section C essay questions (10M).
+- Question balls 29-30 resolve to Section D compulsory/essay questions (10M).
+- Eligibility marks are inferred from question type when older imports have a default/missing marks value (Paragraph=5M, Essay/Comp=10M, short-form types=1M).
+- Ball fill color now indicates an assigned/completed question only; availability in the bank alone does not color the ball orange.
+- Suggestion inspector displays the expected question type and each candidate's actual question type.
+- Matrix cells are highlighted only where the cell's type, marks, section, unit/sub-unit, K-level, and available bank questions can match the selected paper question slot.
+
+CSV verification:
+- I25BI1CCT01_Standard_Question_Bank(1).csv contains 310 question rows.
+- It includes 57 PARAGRAPH questions in Section B and 22 ESSAY questions in Section C.
+- Questions 21-23 in the CSV itself are MCQs; the paper selector ball 21 represents the exam's paragraph slot, not source-bank row Q21. Suggestions therefore filter by eligible type/section/marks rather than assuming source Q number equals exam question number.
+
+Validation:
+- PHP syntax check passed for modules/coe/blueprint.php.
+- Live XAMPP/browser behavior and database values were not executable from this environment; please test in your local project.

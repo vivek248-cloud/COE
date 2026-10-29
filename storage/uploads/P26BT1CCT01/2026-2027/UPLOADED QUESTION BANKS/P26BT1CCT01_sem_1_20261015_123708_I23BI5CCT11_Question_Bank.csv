@@ -1,0 +1,629 @@
+﻿"q_number","unit_no","sub_unit","section_type","question_text","marks","k_level","co_level","question_type","options_json","answer_key","column_a","column_b","source_course_code"
+"1","1","1.1","SECTION-A","1. When did cheminformatics emerge as a distinct field?  
+a. 1900s		b. 1950s		c. 1970s		d. 1990s	        Key: d","1","K1","","MCQ","","d","","","I23BI5CCT11"
+"2","1","1.1","SECTION-A","2. What is cheminformatics primarily concerned with?  
+a. Studying chemical reactions in the lab
+b. Storing, retrieving, and analyzing chemical data using computational methods
+c. Designing new laboratory equipment
+d. Studying the physical properties of elements						Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"3","1","1.2","SECTION-A","3. Simplified Molecular Input Line Entry System is a notation system used to represent
+a. Crystal structures   b. Molecular connectivity   c. Quantum mechanics    d. Nuclear reactions
+Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"4","1","1.2","SECTION-A","4. Wiswesser  Line Notation primarily encode
+a. Molecular vibrations b. Structural formulas  c. Quantum energy  d. Atomic weights	Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"5","1","1.3","SECTION-A","5.Infochem’s reaction classification is a model-driven approach used for
+a. Predicting chemical toxicity
+b. Analyzing and categorizing chemical reactions
+c. Determining boiling points of compounds
+d. Identifying unknown compounds in a mixture						Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"6","1","1.3","SECTION-A","6. In cheminformatics, the reaction center refers to   
+a. The laboratory where a reaction occurs
+b. The specific atoms or bonds that undergo change in a reaction
+c. The energy source for a reaction
+d. The software used to store reaction data							Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"7","1","1.1","SECTION-A","7.Match the following concepts in column A with their corresponding description in column B and choose the correct panel:
+Column A 			Column B
+1. Cheminformatics		A. Systematic naming of chemical compounds
+2. Chemical nomenclature	B. Study of storing, retrieving, and analyzing chemical data
+3. IUPAC		C. Organization responsible for developing standardized chemical names
+4. Line notation		D.Text-based representation of chemical structures
+E. Method for determining the physical properties of compounds
+a. 1C, 2B, 3A, 4D    b. 1B, 2A, 3C, 4D c.1E,2C,3D,4A        d.1D,2C,3A,4B      		Key: b","1","K1","","MATCH","","b","1. Cheminformatics A. Systematic naming of chemical compounds | 2. Chemical nomenclature B. Study of storing, retrieving, and analyzing chemical data | 3. IUPAC C. Organization responsible for developing standardized chemical names | 4. Line notation D.Text-based representation of chemical structures | E. Method for determining the physical properties of compounds | a. 1C, 2B, 3A, 4D b. 1B, 2A, 3C, 4D c.1E,2C,3D,4A d.1D,2C,3A,4B Key: b","","I23BI5CCT11"
+"8","1","1.2","SECTION-A","8. Match the following concepts in column A with their corresponding description in column B and choose the correct panel:
+Column A 			Column B
+1. SMILES notation		A. Model-driven reaction classification
+2. InChI			B. Unique and non-ambiguous chemical representation
+3. Infochem’s system		C. Line notation for molecular structures
+4. Reaction center		D. Site where bond changes occur in a reaction
+E. Spectroscopy-based molecular identification
+a. 1C, 2B, 3A, 4D    b.1B,2A,3E,4C    c.1E,2C,3D,4A        d.1D,2C,3A,4B 		Key: a","1","K1","","MATCH","","a","1. SMILES notation A. Model-driven reaction classification | 2. InChI B. Unique and non-ambiguous chemical representation | 3. Infochem’s system C. Line notation for molecular structures | 4. Reaction center D. Site where bond changes occur in a reaction | E. Spectroscopy-based molecular identification | a. 1C, 2B, 3A, 4D b.1B,2A,3E,4C c.1E,2C,3D,4A d.1D,2C,3A,4B Key: a","","I23BI5CCT11"
+"9","1","1.1","SECTION-A","9. Which of the following is not a major application of cheminformatics?
+a. Drug discovery b. Weather forecasting  c. Molecular modelling  d. Chemical database 	Key:b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"10","1","1.1","SECTION-A","10. A molecule is represented using atoms as vertices and bonds as edges. Which representation is being used?
+a. Gene mapping     b. Molecular graph      c. Molecular modelling 	d. Sequence file             Key:b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"11","1","1.2","SECTION-A","11. ROSDAL stands for
+a. Representation of Organic Structures Described by Atomic Labels
+b. Reactive Organic Structure Data and Analysis Language
+c. Recognition of Structural Descriptors and Labels
+d. Reactive Organic System for Data Analysis and Learning					Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"12","1","1.2","SECTION-A","12. A researcher represents ethanol as CCO for computer processing. The notation being applied is
+a. ROSDAL	b. WLN coding	c. SMILES	d. Sybyl notation                         Key: C","1","K2","","MCQ","","C","","","I23BI5CCT11"
+"13","1","1.3","SECTION-A","13. Determine the type of reaction classification system used to categorize chemical reactions based on mechanistic similarities.  
+a. Empirical classification
+b. Thermodynamic classification
+c. Model-driven classification
+d. Kinetic classification									Key: c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"14","1","1.3","SECTION-A","14. A reaction database marks atoms participating directly in the chemical transformation. These atoms belong to the
+a. Reaction centre	b. Molecular formula	c. Structure key	d. Fingerprint             Key : a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"15","1","1.1","SECTION-A","15. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: IUPAC nomenclature provides a standardized way to name chemical compounds globally.
+Reason: Without IUPAC rules, different regions might use inconsistent names for the same chemical compound.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.						Key: a","1","K2","","AR","","a","","","I23BI5CCT11"
+"16","1","1.2","SECTION-A","16. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: Sybyl line notation is primarily used for molecular fragment representation in computational chemistry.
+Reason: SLN helps in pharmacophore modeling and molecular docking studies.
+a. Both check this throughout Assertion and Reason are true, and Reason is the correct explanation of Assertion.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					 	Key: a","1","K2","","AR","","a","","","I23BI5CCT11"
+"17","1","1.1","SECTION-A","17. A pharmaceutical company wants to predict the toxicity of new drug molecules before synthesis. Find the technique.
+a. High-throughput screening b. QSAR modeling c. X-ray crystallography d. Mass spectrometry																									Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"18","1","1.1","SECTION-A","18. A newly discovered compound requires a unique and systematic name for database registration. The relevant area is
+a. Chemical nomenclature b. Molecular dynamics c. Protein modeling d. Sequence alignment                                                                                   												Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"19","1","1.2","SECTION-A","19. A researcher is trying to convert chemical structures into a machine-readable format for computational analysis. Identify the appropriate notation they should use.
+a. IUPAC nomenclature b. Wiswesser Line Notation c. UV-Vis Spectroscopy d.  NMR 	Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"20","1","1.3","SECTION-A","20. A reaction contains several unchanged regions and one region with altered connectivity. For reaction representation, the altered region should be treated as the
+a. Reaction center   b. Molecular structure	c. Structure key	d. Descriptor region                                                                             		 										 Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"21","1","1.1","SECTION-A","21. Define the role of databases in cheminformatics.
+22. Name a widely used chemical database.  One word answer should be avoided so change this and check for the same throughout the QB and the levels of VSA
+Identify a prominent chemical database used in research. Explain briefly how it supports chemical information retrieval.
+23. Distinguish between trivial and systematic names used for chemical compounds. Mention the basis on which each type of naming is assigned.
+24.State the purpose of chemical nomenclature.","1","K1","","VSA","","","","","I23BI5CCT11"
+"25","1","1.2","SECTION-A","25. Identify an earlier line notation system that preceded SMILES. Briefly describe how it represents chemical structures.
+26. Describe the type of chemical structures represented by Sybyl notation and its application.","1","K1","","VSA","","","","","I23BI5CCT11"
+"27","1","1.3","SECTION-A","27.How are reaction mechanisms stored in cheminformatics databases?
+28.Determine the model-driven approach used for reaction classification.","1","K1","","VSA","","","","","I23BI5CCT11"
+"29","1","1.1","SECTION-A","29. You are given a large dataset of chemical compounds and need to identify potential drug candidates using computational methods. Determine the approach.","1","K3","","VSA","","","","","I23BI5CCT11"
+"30","1","1.1","SECTION-A","30. Use suitable chemical representation methods to distinguish how the same compound can be encoded in different formats.","1","K3","","VSA","","","","","I23BI5CCT11"
+"31","1","1.2","SECTION-A","31. A chemist is working with the following file format. Determine the primary challenge they might face?","1","K3","","VSA","","","","","I23BI5CCT11"
+"32","1","1.2","SECTION-A","32. A computational chemist needs a molecular representation system that supports pharmacophore modeling. Identify the best choice of representation.","1","K3","","VSA","","","","","I23BI5CCT11"
+"33","1","1.3","SECTION-A","33.A cheminformatics software needs to identify reaction centres automatically from a set of chemical reactions. Identify the most effective method.","1","K3","","VSA","","","","","I23BI5CCT11"
+"34","1","1.3","SECTION-A","34. A reaction database contains substitution, addition, elimination, and oxidation reactions with different bond changes. Analyze how reaction type and reaction centre information can be used together to represent these transformations accurately.","1","K3","","VSA","","","","","I23BI5CCT11"
+"35","1","1.1","SECTION-A","35. Analyze a chemical database containing differently named forms of the same compound and identify the nomenclature issue affecting reliable information retrieval.","1","K4","","VSA","","","","","I23BI5CCT11"
+"36","1","1.2","SECTION-A","36. Convert the following chemical into SMILES notation and then into InChI format.
+C6​H6​O","1","K4","","VSA","","","","","I23BI5CCT11"
+"37","1","1.2","SECTION-A","37. Examine the role of Sybyl line notation in chemical structure representation and identify its relevance to computational molecular processing.","1","K4","","VSA","","","","","I23BI5CCT11"
+"38","1","1.3","SECTION-A","38. Analyze the following reaction and inspect the reaction center impact.
+CH₃COOCH₃+H2​O→CH₃COOH+CH₃OH","1","K4","","VSA","","","","","I23BI5CCT11"
+"39","1","1.1","SECTION-B","39.Explore the chemical nomenclature and its developmental classifications.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"40","1","1.2","SECTION-B","40.Discuss the advantages and limitations of using SMILES notation for molecular representation.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"41","1","1.1","SECTION-B","41.Examine the dots represented in the graph and evaluate their impact on modern chemical data analysis methodologies.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"42","1","1.2","SECTION-B","42.Determine the chemical compounds and critique the strength and weakness.
+1. NC(Cc1ccccc1)C(O)=O
+2. C[1]H:CH:CH:CH:CH:C(:@1)CH2CH(NH2)C(=O)OH","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"43","1","1.3","SECTION-B","43. Identify the given reaction based on its key formation patterns, mechanism, and key molecular changes and explain it using InfoChem’s approach.
+c1ccccc1 + [NO2+] → O2Nc1ccccc1","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"44","1","1.1","SECTION-B","44. Examine the major stages in the development of cheminformatics and analyze how advances in chemical representation and nomenclature contributed to efficient digital chemical information management.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"45","1","1.2","SECTION-B","45. You are developing a reaction prediction tool. Apply line notations alongside a model-driven approach and discuss the associated challenges.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"46","1","1.3","SECTION-B","46. Methane
+ChemDraw01042309352D
+5  4  0  0  0  0            999 V2000
+0.0000    0.0000    0.0000 C   0  0  0  0  0  0
+0.6300    0.6300    0.0000 H   0  0  0  0  0  0
+-0.6300    0.6300    0.0000 H   0  0  0  0  0  0
+-0.6300   -0.6300    0.0000 H   0  0  0  0  0  0
+0.6300   -0.6300    0.0000 H   0  0  0  0  0  0
+1  2  1  0
+1  3  1  0
+1  4  1  0
+1  5  1  0
+M  END
+Examine the given file format convert it to SDF format, and tabulate the differences.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"47","1","1.2","SECTION-C","47. Discuss different line notations used for chemical representation. Explain their role in chemical databases.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"48","1","1.2","SECTION-C","48. Compare WLN and ROSDAL coding in terms of structure representation, advantages, and limitations.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"49","1","1.2","SECTION-C","49. Summarize SMILES notation and its application in detail.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"50","1","1.3","SECTION-C","50. Describe a reaction center in a chemical reaction, its significance, and its role in reaction classification and modeling.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"51","1","1.2","SECTION-D","51. A cheminformatics research team is analyzing the effectiveness of different line notations in representing chemical compounds. The following dataset includes four molecules represented using WLN, SMILES, and ROSDAL, along with their molecular formulae.
+Predict the WLN, SMILES, and ROSDAL representations for the given molecule, Propanoic Acid, based on established patterns.
+Suggest improvements to enhance machine readability and standardization of line notations in cheminformatics applications.
+UNIT :2","10","K5","","ESSAY","","","","","I23BI5CCT11"
+"1","2","2.1","SECTION-A","1. Choose the matrices representing the connection between atoms in a molecular graph.
+a. Distance matrix   b. Adjacency matrix   c. Hessian matrix    d. Covariance matrix	Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"2","2","2.1","SECTION-A","2. An edge-weighted molecular graph defines
+a. A graph where bonds have weights based on their properties
+b. A graph where atoms have weights assigned to them
+c. A graph used only for biomolecules
+d. A graph that ignores hydrogen atoms							Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"3","2","2.2","SECTION-A","3. Identify the commonly used format for representing chemical structures in computational chemistry.
+a. FASTA	b.Molfile	c. XML	d. JSON					Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"4","2","2.2","SECTION-A","4. A connection table in chemical informatics represents
+a. A database of all known molecules
+b. A tabular format showing atomic connections and bond types
+c. A software for predicting chemical reactions
+d. A table of molecular weights								Key:b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"5","2","2.3","SECTION-A","5. Markush structures used for
+a. Representing a single specific molecule
+b. Representing a class of related chemical compounds
+c. Storing 3D molecular coordinates
+d. Determining molecular weight								Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"6","2","2.3","SECTION-A","6. Which of the following is NOT a molecular representation method?
+a. Fingerprints		b. Hashcodes 		c. Distance matrix	d. Unicode encoding										                                                Key: d","1","K1","","MCQ","","d","","","I23BI5CCT11"
+"7","2","2.2","SECTION-A","7. Match the following terms in column A with their corresponding options in column B and choose the correct panel:
+Column A  			Column B
+1. Adjacency Matrix		A. Used for molecular similarity searching
+2. Molfile			B. Represents atomic connectivity in a graph
+3. PDB Format		C. Stores protein and macromolecule structures
+4. Fingerprints			D. Text-based representation of molecular data
+E. Contains shortest path distances
+a.1B,2D,3C,4A	b.1B,2D,3A,4C	c. 1E,2D,3C,4A    d. 1C,2E,3B,4D		Key: a","1","K1","","MATCH","","a","1. Adjacency Matrix A. Used for molecular similarity searching | 2. Molfile B. Represents atomic connectivity in a graph | 3. PDB Format C. Stores protein and macromolecule structures | 4. Fingerprints D. Text-based representation of molecular data | E. Contains shortest path distances | a.1B,2D,3C,4A b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: a","","I23BI5CCT11"
+"8","2","2.3","SECTION-A","8. Match the following chemical structure in column A with their corresponding descriptions in column B and choose the correct panel:
+Column A				Column B
+1. Markush Structures			A. Used for molecular similarity searching
+2. Hashcodes				B. Used in patents for representing compound classes
+3. Fingerprints				C. Stores crystallographic atomic coordinates
+4. CIF Format				D. Encodes molecular structures into numerical values
+E. Represents hierarchical data in molecular databases
+a.1B,2D,3C,4A   	b.1B,2D,3A,4C	c. 1E,2D,3C,4A    d. 1C,2E,3B,4D   		Key: b","1","K1","","MATCH","","b","1. Markush Structures A. Used for molecular similarity searching | 2. Hashcodes B. Used in patents for representing compound classes | 3. Fingerprints C. Stores crystallographic atomic coordinates | 4. CIF Format D. Encodes molecular structures into numerical values | E. Represents hierarchical data in molecular databases | a.1B,2D,3C,4A b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: b","","I23BI5CCT11"
+"9","2","2.1","SECTION-A","9. Name the matrix that stores the shortest path distances between atoms in a molecular graph.
+a. Adjacency matrix 	b. Hessian matrix	c. Distance matrix	d. Incidence matrix														Key: c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"10","2","2.1","SECTION-A","10. If two atoms in a molecular graph are directly connected by a chemical bond, their corresponding entries in the adjacency matrix are generally:
+Zero	b. One		c. Negative		d. Undefined                                       Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"11","2","2.2","SECTION-A","11. Select the standard molecular structure file format used in crystallography.
+a. CIF		b. FASTA	   c.Molfile	     d. SMILES					 Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"12","2","2.2","SECTION-A","12.  Identify the standard chemical file format that can store multiple molecular structures in a single file.
+a. Molfile	b. SDF		c. SMILES  	d. JPEG                                                          Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"13","2","2.3","SECTION-A","13. Choose the representation method typically used for molecular docking simulations.
+a. Adjacency matrix	b. Distance matrix	c. PDB file format	d. SMILES notation										                                                 Key: c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"14","2","2.3","SECTION-A","14. Identify the chemical structure representation used to describe a generic structure containing variable substituents.
+a. Fingerprint	        b. Markush structure	 c. Hashcode	   d. Fragment code	             Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"15","2","2.1","SECTION-A","15. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: The adjacency matrix of a molecular graph provides information about the connectivity between atoms in a molecule.
+Reason: It stores bond lengths and atomic coordinates.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.						Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"16","2","2.2","SECTION-A","16. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: Structure Data File format allows the storage of multiple molecular structures in a single file.
+Reason: An extension of Molfile and can store additional data fields along with molecular structures are SDF File.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.						Key: a","1","K2","","AR","","a","","","I23BI5CCT11"
+"17","2","2.1","SECTION-A","17. A molecular graph has 6 vertices and 7 edges. Determine the minimum number of edges that must be removed to make it a tree.
+a. 1 		b. 2		c. 3		d. 4						Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"18","2","2.1","SECTION-A","18. A researcher wants to determine whether two atoms are directly bonded and also calculate their shortest graph separation. Select the appropriate combination.
+a. Hashcode and adjacency matrix
+b. Distance matrix and fingerprint
+c. Adjacency matrix and distance matrix
+d. Connection table and hashcode                                                                 			Key: c","1","K3","","MCQ","","c","","","I23BI5CCT11"
+"19","2","2.2","SECTION-A","19.A researcher wants to store multiple molecular structures with additional metadata. Identify the file format they should choose
+a.Molfile		b. PDB			c. SDF			d. SMILES		Key: c","1","K3","","MCQ","","c","","","I23BI5CCT11"
+"20","2","2.3","SECTION-A","20. A crystallographic database needs a standardized file representation for storing crystal structure information. Select the appropriate format.
+a. PDB  	 	b. CIF			c. Fingerprint       	d. Hashcode 		Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"21","2","2.1","SECTION-A","21.Define molecular graph.","1","K1","","VSA","","","","","I23BI5CCT11"
+"22","2","2.1","SECTION-A","22. What does the adjacency matrix represent in molecular graphs?","1","K1","","VSA","","","","","I23BI5CCT11"
+"23","2","2.1","SECTION-A","23. Describe the significance of the distance matrix in molecular graphs.","1","K1","","VSA","","","","","I23BI5CCT11"
+"24","2","2.2","SECTION-A","24. Describe the main function of a Molfile in chemical data processing. Mention how it represents molecular structure.","1","K1","","VSA","","","","","I23BI5CCT11"
+"25","2","2.2","SECTION-A","25. Identify a standard crystallographic structure exchange format. Mention how it facilitates the storage or exchange of crystal structure information.","1","K1","","VSA","","","","","I23BI5CCT11"
+"26","2","2.2","SECTION-A","26. Identify the main information stored in a connection table and mention its importance in chemical structure representation.","1","K1","","VSA","","","","","I23BI5CCT11"
+"27","2","2.3","SECTION-A","27. Define Markush structures.","1","K1","","VSA","","","","","I23BI5CCT11"
+"28","2","2.3","SECTION-A","28. Define a chemical hash code and its significance in cheminformatics.","1","K1","","VSA","","","","","I23BI5CCT11"
+"29","2","2.1","SECTION-A","29. A chemical compound has 10 atoms, where carbon atoms are connected by single bonds only. Determine the type of matrix that can best represent the connectivity of these atoms.","1","K3","","VSA","","","","","I23BI5CCT11"
+"30","2","2.1","SECTION-A","30. A chemist wants to analyze the shortest path between all pairs of atoms in a molecular structure. Identify the matrix they should use and construct it.","1","K3","","VSA","","","","","I23BI5CCT11"
+"31","2","2.2","SECTION-A","31. Select the best choice format if a molecular database system requires a compact text representation for quick searching and indexing of chemical structures. Justify.","1","K3","","VSA","","","","","I23BI5CCT11"
+"32","2","2.2","SECTION-A","32. A researcher needs to store atom coordinates and bond connectivity of a single molecule. Identify a suitable format and state its relevant components.","1","K3","","VSA","","","","","I23BI5CCT11"
+"33","2","2.3","SECTION-A","33. A pharmaceutical company is filing a patent for a new drug class that consists of multiple possible derivatives. Analyse which representation method should they use?","1","K3","","VSA","","","","","I23BI5CCT11"
+"34","2","2.3","SECTION-A","34. A cheminformatics program converts structural information into a compact numerical representation for rapid searching. Identify the representation and state its purpose.","1","K3","","VSA","","","","","I23BI5CCT11"
+"35","2","2.1","SECTION-A","35. A chemical graph is represented using numerical values for both its vertices and edges. Identify the type of molecular graph formed and state the information represented by its weights.","1","K4","","VSA","","","","","I23BI5CCT11"
+"36","2","2.2","SECTION-A","36. Ethanol
+ChemDraw07112211342D
+9  8  0  0  0  0            999 V2000
+0.0000    0.0000    0.0000 C  0  0  0  0  0
+1.2000    0.0000    0.0000 C  0  0  0  0  0
+1.8000    0.9000    0.0000 O  0  0  0  0  0
+-0.6000    0.9000    0.0000 H  0  0  0  0  0
+-0.6000   -0.9000    0.0000 H  0  0  0  0  0
+1.8000   -0.9000    0.0000 H  0  0  0  0  0
+2.4000    0.0000    0.0000 H  0  0  0  0  0
+1.2000    1.8000    0.0000 H  0  0  0  0  0
+2.4000    1.8000    0.0000 H  0  0  0  0  0
+1  2  1  0
+2  3  1  0
+1  4  1  0
+1  5  1  0
+2  6  1  0
+2  7  1  0
+3  8  1  0
+3  9  1  0
+M  END
+><NAME>
+Ethanol
+><MOLECULAR_WEIGHT>
+46.07
+><SMILES>
+CCO
+$$$$
+Examine the file format given and write the significance of the highlighted symbol.","1","K4","","VSA","","","","","I23BI5CCT11"
+"37","2","2.2","SECTION-A","37. A researcher selects SDF instead of Molfile for storing a collection of compounds. Identify the structural feature that makes SDF suitable for this application.","1","K4","","VSA","","","","","I23BI5CCT11"
+"38","2","2.3","SECTION-A","38. Chemical_formula_sum 'C6 H12 O6' 'C2 H6 O2' 'C3 H6 O3'
+Evaluate the format above and find the file format.","1","K4","","VSA","","","","","I23BI5CCT11"
+"39","2","2.1","SECTION-B","39. Discuss the role of adjacency matrices and distance matrices in analyzing molecular graphs. Provide an example of how these matrices help in cheminformatics applications.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"40","2","2.2","SECTION-B","40. Differentiate between different file formats in chemical structure representation.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"41","2","2.1","SECTION-B","41. A molecule is represented as a graph where carbon atoms are vertices and bonds are edges. Find the molecule anddescribe the matrix representation. What type of graph does the molecule form?","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"42","2","2.2","SECTION-B","42. A scientist is analysing protein structures and needs to store the 3D atomic coordinates of an enzyme. Explain with an example.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"43","2","2.3","SECTION-B","43. A chemist searches for similar painkillers in a database using chemical fingerprints instead of full molecular structures. How does this approach speed up the search?","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"45","2","2.2","SECTION-B","45.A research institute developing a large-scale chemical database must carefully select the appropriate molecular file formats based on the types of compounds being stored. The database will include both small organic molecules and protein-ligand complexes, making it essential to balance data compatibility, structural representation, and computational efficiency. Choose the Optimal File Formats for the Database.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"46","2","2.3","SECTION-B","46. A pharmaceutical company has developed a series of cancer drugs with slight variations in their molecular structure. Instead of filing separate patents for each variation, they decide to use a following structure. Break down the structure and explain its impact on the chemical database application.
+R1
+|
+O=C—N—C(R2)—C(R3)—COOH
+|     |
+S     N","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"47","2","2.1","SECTION-C","47. How do matrix representations of molecular graphs help in analyzing chemical structures?","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"48","2","2.2","SECTION-C","48. Describe the connection table and its role in encoding molecular structures.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"49","2","2.2","SECTION-C","49. Explain the structure and components of a Molfile and its significance in chemical informatics.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"50","2","2.3","SECTION-C","50. Define Markush structures and explain their importance in representing chemical variability.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"51","2","2.1","SECTION-D","51. Justify the optimal file format for storing multiple molecular structures, assess the role of graph theory in molecular analysis, and recommend the use of chemical fingerprints and hash codes for similarity searching in large chemical databases.","10","K5","","ESSAY","","","","","I23BI5CCT11"
+"1","3","3.1","SECTION-A","1.Which of the following is a well-known structure database for chemistry?
+a. INSPEC
+b. Medline
+c. PubMed
+d. Google Scholar							Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"2","3","3.1","SECTION-A","2.The Beilstein database focuses mainly on
+a. Biochemical compounds
+b. Organic chemistry compounds
+c. Physical chemistry properties
+d. Astronomical data							Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"3","3","3.2","SECTION-A","3.SCI-SEARCH is mainly used for
+a. Chemical synthesis data
+b. Citation indexing of scientific literature
+c.Pharmaceutical patents
+d. Spectroscopy analysis						Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"4","3","3.2","SECTION-A","4.The SpecInfo database is primarily used for
+a. Chemical reactions
+b. Spectroscopic data
+c. Patent filings
+d. Crystallography							Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"5","3","3.3","SECTION-A","5.The CAS Registry Number is important because
+a. It provides a unique identifier for chemical substances
+b. It describes a molecule’s shape
+c. It is used for quantum chemistry calculations
+d. It classifies elements in the periodic table				Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"6","3","3.3","SECTION-A","6. ChEMBL and ChEBI differ because
+a. ChEMBL focuses on bioactivity, while ChEBI focuses on biological entities
+b.ChEMBL is a literature database, while ChEBI is a spectroscopy database
+c.ChEMBL is used for crystallography, while ChEBI is for proteins
+d. Both are the same							Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"7","3","3.2","SECTION-A","7. Match the following Databases in column A with their corresponding function in column B and choose the correct panel:
+Column A 			Column B
+1. Chemical Abstracts File 		A. Stores scientific literature and research articles
+2. SCISEARCH			B. Provides access to medical and biomedical literature
+3. Medline				C. Contains spectroscopic data for compound identification
+4. SpecInfo				D. Indexes chemical abstracts and publications
+E. Stores crystallographic data for inorganic compounds
+a.1B,2D,3A,4C  b. 1E,2D,3C,4A    c. 1C,2E,3B,4D   d. 1D,2A,3B, 4C	Key: d","1","K1","","MATCH","","d","1. Chemical Abstracts File A. Stores scientific literature and research articles | 2. SCISEARCH B. Provides access to medical and biomedical literature | 3. Medline C. Contains spectroscopic data for compound identification | 4. SpecInfo D. Indexes chemical abstracts and publications | E. Stores crystallographic data for inorganic compounds | a.1B,2D,3A,4C b. 1E,2D,3C,4A c. 1C,2E,3B,4D d. 1D,2A,3B, 4C Key: d","","I23BI5CCT11"
+"8","3","3.3","SECTION-A","8. Match the following Databases in column A with their corresponding function in column B and choose the correct panel:
+Column A 			Column B
+1. CAS Registry		A. Stores bioactivity data for drug discovery
+2. NCI Database		B. Provides chemical patent information worldwide
+3. ChEMBL			C. Contains chemical substances with registry numbers
+4. ChEBI			D. Specializes in biological molecules and small compounds
+E. Focuses on cancer research compounds
+a.1C,2E,3A,4D	b.1B,2D,3A,4C	  c. 1E,2D,3C,4A    	d. 1C,2E,3B,4D 	Key: a","1","K1","","MATCH","","a","1. CAS Registry A. Stores bioactivity data for drug discovery | 2. NCI Database B. Provides chemical patent information worldwide | 3. ChEMBL C. Contains chemical substances with registry numbers | 4. ChEBI D. Specializes in biological molecules and small compounds | E. Focuses on cancer research compounds | a.1C,2E,3A,4D b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: a","","I23BI5CCT11"
+"9","3","3.1","SECTION-A","9.The GMELIN database primarily covers
+a. Organic molecules	b. Inorganic molecules    c. Protein structures   d. DNA sequences	Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"10","3","3.1","SECTION-A","10. A researcher searching for detailed information on organic compounds and their chemical reactions would most appropriately use
+a. INSPEC		b. GMELIN 		c. Beilstein		d. PDB 		Key: c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"11","3","3.2","SECTION-A","11. Spectroscopic databases are mainly used for
+a. Identifying molecular structures based on spectral data
+b. Finding new chemical reactions
+c. Drug discovery processes
+d. Tracking clinical trials									Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"12","3","3.2","SECTION-A","12. A researcher investigating experimentally determined crystal structures of organic and metal–organic compounds would most appropriately use
+a. ICSD	b. CSD		c. SCISEARCH	d. Chemical Abstracts			Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"13","3","3.3","SECTION-A","13. Which database is used for chemical patents?
+a. Beilstein		b.Reaxys		c. INPADOC		d.SpecInfo		Key:c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"14","3","3.3","SECTION-A","14. A researcher studying standardized information about chemical entities and their biological roles would find which database most appropriate?
+a. BindingDB		b. ChEBI	c. INPADOC		d. NCI Database		Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"15","3","3.1","SECTION-A","15. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: The CAS Registry assigns a unique identifier to every chemical substance.
+Reason: The numbers are used for systematic classification and retrieval of chemical compounds in scientific and regulatory databases are CAS Registry.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.						Key: a","1","K2","","AR","","a","","","I23BI5CCT11"
+"16","3","3.2","SECTION-A","16. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: The Cambridge Structural Database contains detailed crystallographic data for inorganic compounds.
+Reason: The Inorganic Crystal Structure Database is specifically designed for inorganic compounds, while CSD primarily focuses on organic structures.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"17","3","3.1","SECTION-A","17. You are researching bioactive compounds with potential pharmaceutical applications. Identify the database that would be the most appropriate for retrieving such data.
+a. Beilstein		b.ChEMBL		c. ICSD		d. GMELIN		Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"18","3","3.1","SECTION-A","18. A researcher compares the retrieval of relevant chemical records using different search strategies. Which feature of CrossFire is most relevant to this evaluation?
+a. Retrieval performance b. Molecular visualization c. Protein folding d. Sequence alignment
+Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"19","3","3.2","SECTION-A","19. If you need crystallographic data of a newly discovered inorganic compound to compare with existing structures, examine the most useful database.
+a. ICSD	b.ChEMBL	c. SCISEARCH	d. Medline				Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"20","3","3.3","SECTION-A","20. A pharmaceutical researcher wants to determine whether similar inventions have already been disclosed in patent documents across different countries. Which resource would be most appropriate?
+a. ChEBI	b. BindingDB		c. INPADOC		d. ChEMBL			Key: c","1","K3","","MCQ","","c","","","I23BI5CCT11"
+"21","3","3.1","SECTION-A","21. Describe the role of the CrossFire system in chemical databases?","1","K1","","VSA","","","","","I23BI5CCT11"
+"22","3","3.1","SECTION-A","22. Explain the significance of the Inorganic Crystal Structure Database (ICSD) in crystallographic research?","1","K1","","VSA","","","","","I23BI5CCT11"
+"23","3","3.2","SECTION-A","23. Identify a database widely used for citation analysis and literature searching. Mention its significance in evaluating scientific publications.","1","K1","","VSA","","","","","I23BI5CCT11"
+"24","3","3.2","SECTION-A","24. List the databases that are widely used for accessing scientific publications in chemistry.","1","K1","","VSA","","","","","I23BI5CCT11"
+"25","3","3.2","SECTION-A","25. Expand the abbreviation SpecInfo and state its primary purpose in chemical information systems.","1","K1","","VSA","","","","","I23BI5CCT11"
+"26","3","3.3","SECTION-A","26. State the role of INPADOC in patent information retrieval.","1","K1","","VSA","","","","","I23BI5CCT11"
+"27","3","3.3","SECTION-A","27. Define the primary purpose of the ChEMBL database.","1","K1","","VSA","","","","","I23BI5CCT11"
+"28","3","3.3","SECTION-A","28.Define CAS. Determine the chemical structure database maintained by the CAS.","1","K1","","VSA","","","","","I23BI5CCT11"
+"29","3","3.1","SECTION-A","29. A medicinal chemist is investigating bioactive compounds and their pharmacological properties. Identify which file extension should they explore? Justify.","1","K3","","VSA","","","","","I23BI5CCT11"
+"30","3","3.1","SECTION-A","30. A researcher needs scientific literature related to physics, electronics, and computing. Identify the database that would support this search and state why it is chosen for this purpose.","1","K3","","VSA","","","","","I23BI5CCT11"
+"31","3","3.2","SECTION-A","31. A chemist is analyzing the spectral data of a newly synthesized compound. Determine the database would provide reference spectra for comparison.","1","K3","","VSA","","","","","I23BI5CCT11"
+"32","3","3.2","SECTION-A","32. You are conducting a literature review on a newly discovered enzyme inhibitor. Identify the database that will help you find the most relevant research papers. State its significant role","1","K3","","VSA","","","","","I23BI5CCT11"
+"33","3","3.3","SECTION-A","33. A scientist needs to retrieve bibliographic and citation data on chemical literature, while working on an interdisciplinary research project. Name the database that would be most useful and state its significance.","1","K3","","VSA","","","","","I23BI5CCT11"
+"34","3","3.3","SECTION-A","34.A drug discovery project requires both ligand-binding information and related patent records. Which databases could be combined for this investigation? Justify.","1","K3","","VSA","","","","","I23BI5CCT11"
+"35","3","3.1","SECTION-A","35.
+Analyse the strengths and limitations of the structure databases given in the table. Determine the database names and which database is more suitable for different research applications","1","K4","","VSA","","","","","I23BI5CCT11"
+"36","3","3.1","SECTION-A","36. A researcher needs to identify documented synthetic transformations associated with a selected compound. Which CrossFire component would be most appropriate for this investigation?","1","K4","","VSA","","","","","I23BI5CCT11"
+"37","3","3.2","SECTION-A","37. Analyse the given image and give a short report.
+38.  A researcher wants to establish whether a bioactive compound has both standardized chemical annotation and documented biological activity. Which database pair would provide complementary evidence?","1","K4","","VSA","","","","","I23BI5CCT11"
+"39","3","3.1","SECTION-B","39. Summarise one chemical database used for inorganic structures.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"40","3","3.3","SECTION-B","40. Compare and contrast ICSD and CSD databases. How do they differ in terms of the compounds they store and their applications?","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"41","3","3.1","SECTION-B","41. A pharmaceutical company is screening new compounds for drug discovery. How can substructure searching in the CrossFire system enhance their ability to find related compounds with potential bioactivity?","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"42","3","3.2","SECTION-B","42. A forensic chemist has obtained an unknown chemical compound and needs to determine its structure using spectroscopy. How can the SpecInfo database be used to compare spectral data and identify the compound?","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"43","3","3.3","SECTION-B","43. A biotech company is screening chemical compounds for potential drug development. Which database would be most useful for retrieving bioactivity and drug-likeness data? Summarise its importance.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"44","3","3.1","SECTION-B","44. The Gmelin database has challenges like outdated data, missing structural details, inconsistent names, and limited computational tools. How do these challenges affect the discovery of new inorganic materials? How could AI improve accuracy and efficiency? Provide examples to support your choice?","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"45","3","3.2","SECTION-B","45. A research team is comparing several reported compounds and needs literature evidence, citation information, spectral records, and experimentally determined crystal structures for a detailed structural assessment. Evaluate the complementary roles of CSD/ICSD in this workflow.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"46","3","3.3","SECTION-B","46. A biotech startup is exploring potential drug candidates for COVID-19 treatment. Critically evaluate how the ChEMBL database can assist in predicting drug efficacy, potential side effects, and molecular interactions. What additional resources should be used for validation?","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"47","3","3.1","SECTION-C","47. Explain the importance of the Beilstein database in organic chemistry research. How does it help chemists in structure and reaction searches?","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"48","3","3.2","SECTION-C","48. Why is SCISEARCH an essential tool for researchers conducting literature reviews in chemistry? Discuss its key features and how it differs from other literature databases.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"49","3","3.3","SECTION-C","49. Patent information is crucial for protecting chemical innovations. Discuss the role of the INPADOC database in retrieving chemical patent information and ensuring intellectual property rights.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"50","3","3.3","SECTION-C","50.How does ChEMBL support drug discovery and pharmaceutical research? Explain its role in analyzing bioactivity and molecular interactions.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"51","3","3.2","SECTION-D","51. Analyze the reliability of data observed by experimental method and SpecInfo. Using the provided data, discuss whether databases alone can fully replace experimental techniques in identifying the unknown compound.","10","K5","","ESSAY","","","","","I23BI5CCT11"
+"1","4","4.1","SECTION-A","1.Structure descriptors are classified based on
+a. By their chemical elements
+b. By molecular complexity
+c. Based on data type and molecular representation
+d. By the number of atoms in a molecule						Key: c","1","K1","","MCQ","","c","","","I23BI5CCT11"
+"2","4","4.1","SECTION-A","2.Select the 1D structural descriptor from the following options.
+a. Molecular weight	b. Molecular graph	c. Topological index	d. 3D pharmacophore	Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"3","4","4.2","SECTION-A","3. Identify the option that is NOT a physicochemical property descriptor.
+a. Lipophilicity	b. Molecular weight	c. H bond donors	d. 3D molecular conformation												Key: d","1","K1","","MCQ","","d","","","I23BI5CCT11"
+"4","4","4.2","SECTION-A","4.Choose the correct representation of topological indices in molecular structure analysis.
+a. The molecular mass
+b. The electronic configuration of atoms
+c. The connectivity and branching of molecular graphs
+d. The crystal lattice of molecules								Key: c","1","K1","","MCQ","","c","","","I23BI5CCT11"
+"5","4","4.3","SECTION-A","5.Select the descriptor that is most useful for shape-based drug design.
+a. Wiener Index	b. Pharmacophore modeling	c.LogP		d. Molecular weight	Key: d","1","K1","","MCQ","","d","","","I23BI5CCT11"
+"6","4","4.3","SECTION-A","6. Determine the purpose of molecular docking studies.
+a. To synthesize new molecules
+b. To predict protein-ligand interactions
+c. To analyze melting points
+d. To calculate molecular weight								Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"7","4","4.1","SECTION-A","7. Match the following molecular representation in column A with their corresponding description in column B and choose the correct panel:
+Column A						Column B
+1.Graph-Based Representation 		      A. Encoded molecular patterns
+2.SMILES                                                            B.Unique textual identifier
+3. InChI 					      C. Linear string notation
+4. Structure Keys				      D. Nodes (atoms) & edges (bonds)
+E. Binary/hash-based similarity search
+a.1D,2C,3B,4Ab.1B,2D,3A,4C  c. 1E,2D,3C,4A    d. 1C,2E,3B,4D   		Key: a","1","K1","","MATCH","","a","1.Graph-Based Representation A. Encoded molecular patterns | 2.SMILES B.Unique textual identifier | 3. InChI C. Linear string notation | 4. Structure Keys D. Nodes (atoms) & edges (bonds) | E. Binary/hash-based similarity search | a.1D,2C,3B,4Ab.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: a","","I23BI5CCT11"
+"8","4","4.2","SECTION-A","8. Match the following concepts in column A with their corresponding description in column B and choose the correct panel:
+Column A				Column B
+1. Simple Count Descriptors		A. Bit-based molecular representation, similarity searching
+2. Physicochemical Properties	B. Graph-based numerical values representing connectivity
+3. Topological Indices			C. Properties like molwgt, logP, and polar surface area
+4. 2D Fingerprints			D. No of atoms, bonds, rings, in a molecule
+E.  Ways to depict molecular structures digitally
+a.1D,2C,3B,4A	b.1B,2D,3A,4C     c. 1E,2D,3C,4A 	   d. 1C,2E,3B,4D      Key: a","1","K1","","MATCH","","a","1. Simple Count Descriptors A. Bit-based molecular representation, similarity searching | 2. Physicochemical Properties B. Graph-based numerical values representing connectivity | 3. Topological Indices C. Properties like molwgt, logP, and polar surface area | 4. 2D Fingerprints D. No of atoms, bonds, rings, in a molecule | E. Ways to depict molecular structures digitally | a.1D,2C,3B,4A b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: a","","I23BI5CCT11"
+"9","4","4.1","SECTION-A","9. Determine the main advantage of 1D fingerprints.
+a. They provide spatial information about molecules
+b. They are computationally efficient for similarity searches
+c. They help in crystal structure determination
+d. They require experimental data							Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"10","4","4.1","SECTION-A","10. A cheminformatics program converts molecular characteristics into numerical values for analysis to generate
+a) Descriptors		b) Sequences		c) Spectra		d) fingerprint	 	Key : a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"11","4","4.2","SECTION-A","11. A researcher evaluates a molecule using a numerical value derived from its molecular connectivity. Which descriptor is being considered?
+a) Simple count	b) Topological index	c) Physicochemical property	d) 2D fingerprint													Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"12","4","4.2","SECTION-A","12. Identify the fingerprint method used in similarity searching.
+a. IR Spectroscopy	b. Tanimoto Similarity	c. Mass Spectrometry	d. UV-Vis Absorption													Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"13","4","4.3","SECTION-A","13. How are 3D fingerprints different from 2D fingerprints?
+a. 3D fingerprints encode spatial information
+b. 3D fingerprints ignore atomic positions
+c. 3D fingerprints are simpler than 2D fingerprints
+d. 3D fingerprints do not use molecular graphs						Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"14","4","4.3","SECTION-A","14. Identify the descriptor that represents important molecular features based on their three-dimensional arrangement.
+a. Pharmacophore Key	b. 1D Fingerprint	c. Simple Count	d. Molecular Weight													Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"15","4","4.2","SECTION-A","15. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: 2D fingerprints represent molecular structures based on the presence or absence of predefined substructures.
+Reasoning: It encodes molecular topology by analyzing the three-dimensional shape of a molecule.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"16","4","4.3","SECTION-A","16. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: 3D fragment screens and pharmacophore keys are descriptors based on the three-dimensional representation of molecules.
+Reasoning: Its screens and pharmacophore keys analyze molecular connectivity without considering spatial arrangements.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"17","4","4.1","SECTION-A","17. A chemical database contains molecules represented using predefined structural fragments. Select the representation suitable for structure-based searching.
+a. Structure Key 	b. Amino Acid Code	c. Gene Signature	d. Protein Sequence 	Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"18","4","4.2","SECTION-A","18. A scientist is comparing two drug molecules using 2D fingerprints and finds them highly similar. What should they do next to confirm their biological activity?
+a. Compare their molecular weights
+b. Analyze their 3D pharmacophore features
+c. Ignore the results, as 2D similarity is enough
+d. Perform a boiling point analysis								Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"19","4","4.2","SECTION-A","19. A virtual screening system represents several 2D structural features as a coded pattern to compare compounds efficiently. Select the appropriate descriptor.
+a. Physicochemical Property	b. Simple Count	c. Topological Index	d. 2D Fingerprint
+Key: d","1","K3","","MCQ","","d","","","I23BI5CCT11"
+"20","4","4.3","SECTION-A","20. A chemist is designing a drug that should bind to a specific receptor. Which descriptor should be prioritized for selecting candidate molecules?
+a. Molecular weight
+b. Topological indices
+c. 3D pharmacophore keys
+d. Number of hydrogen bonds								Key: c","1","K3","","MCQ","","c","","","I23BI5CCT11"
+"21","4","4.1","SECTION-A","21. What is the primary purpose of structure descriptors in cheminformatics?","1","K1","","VSA","","","","","I23BI5CCT11"
+"22","4","4.1","SECTION-A","22. Define a 1D molecular descriptor with examples.","1","K1","","VSA","","","","","I23BI5CCT11"
+"23","4","4.1","SECTION-A","23. State the purpose of encoding molecular features using fingerprints.","1","K1","","VSA","","","","","I23BI5CCT11"
+"24","4","4.2","SECTION-A","24. List the physicochemical properties used as a descriptor.","1","K1","","VSA","","","","","I23BI5CCT11"
+"25","4","4.2","SECTION-A","25. Name the descriptor type used in predicting solubility and membrane permeability. Explain the molecular properties represented by this descriptor.","1","K1","","VSA","","","","","I23BI5CCT11"
+"26","4","4.3","SECTION-A","26. State the purpose of 2D fingerprints in chemical databases.","1","K1","","VSA","","","","","I23BI5CCT11"
+"27","4","4.3","SECTION-A","27. Mention the usefulness of 3D fragment screens in drug discovery.","1","K1","","VSA","","","","","I23BI5CCT11"
+"28","4","4.3","SECTION-A","28. Describe a 3D pharmacophore and its significance.","1","K1","","VSA","","","","","I23BI5CCT11"
+"29","4","4.1","SECTION-A","29. A researcher wants to classify a set of chemical compounds based on their molecular fingerprints. Recognize the appropriate descriptor type to use and explain the reason.","1","K3","","VSA","","","","","I23BI5CCT11"
+"30","4","4.1","SECTION-A","30. A dataset contains molecular weight, atom counts, bond information, and binary structural patterns. Apply descriptor classification to organize these molecular features.","1","K3","","VSA","","","","","I23BI5CCT11"
+"31","4","4.2","SECTION-A","31. Given a dataset containing molecular weights, LogP values, and topological indices, how can you predict the solubility of a new compound?","1","K3","","VSA","","","","","I23BI5CCT11"
+"32","4","4.2","SECTION-A","32. A virtual screening system represents each compound using a binary pattern of structural features derived from its 2D structure. Apply 2D fingerprints to this screening process.","1","K3","","VSA","","","","","I23BI5CCT11"
+"33","4","4.3","SECTION-A","33. You are developing a QSAR model using 2D descriptors. However, you notice that adding 3D descriptors improves prediction accuracy. Why might this be the case?","1","K3","","VSA","","","","","I23BI5CCT11"
+"34","4","4.3","SECTION-A","34. A computational chemist is designing a new molecule and wants to optimize its bioavailability. Which structure descriptors should they focus on and why?","1","K3","","VSA","","","","","I23BI5CCT11"
+"35","4","4.1","SECTION-A","35. A researcher compares two drug-like compounds having similar molecular weights but different branching patterns and functional groups. Analyze which 2D descriptor categories should be examined to distinguish their structural and physicochemical differences.","1","K4","","VSA","","","","","I23BI5CCT11"
+"36","4","4.2","SECTION-A","36. A QSPR study contains compounds with similar atom counts but substantially different molecular connectivity. Analyze the suitability of simple counts, topological indices, and 2D fingerprints for representing these differences.","1","K4","","VSA","","","","","I23BI5CCT11"
+"37","4","4.3","SECTION-A","37. Predict the Dipole Moment value for Ibuprofen.","1","K4","","VSA","","","","","I23BI5CCT11"
+"38","4","4.3","SECTION-A","38. Analyse the given table and conclude whether the compound is potential or not for oral bioavailability.","1","K4","","VSA","","","","","I23BI5CCT11"
+"39","4","4.1","SECTION-B","39. Describe the differences between 1D, 2D, and 3D structure descriptors. Provide examples of each and explain their applications.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"40","4","4.3","SECTION-B","40. Discuss the role of 3D pharmacophore keys in drug discovery. How do they help in identifying potential drug-receptor interactions.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"41","4","4.1","SECTION-B","41. A researcher is developing a new anti-inflammatory drug and seeks compounds structurally similar to Ibuprofen using molecular fingerprints. The Tanimoto similarity scores for three potential candidates are given below:
+Examine the significance of these scores in identifying promising drug candidates and explain the role of structure keys and molecular fingerprints in drug discovery.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"42","4","4.2","SECTION-B","42.Determine the application of physicochemical properties in assessing a drug’s bioavailability. Use the data below to illustrate their impact.
+43. Apply 3D pharmacophore models to improve drug discovery by comparing the following molecules.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"44","4","4.1","SECTION-B","44. Analyse the strengths and limitations of different molecular fingerprint types in cheminformatics and determine which applications favor one type over others","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"45","4","4.2","SECTION-B","45. A drug-discovery project uses molecular size, polarity, connectivity, and structural patterns as screening criteria. Analyze the contribution of simple counts, physicochemical properties, topological indices, and 2D fingerprints to the screening process.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"46","4","4.3","SECTION-B","46. Examine how molecular flexibility influences the binding affinity of drug candidates and evaluate how balancing rigidity and flexibility can enhance drug efficacy.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"47","4","4.1","SECTION-C","47. What are structure keys and molecular fingerprints? How are they used in chemical databases for searching and similarity analysis? Explain in detail.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"48","4","4.1","SECTION-C","48. How do molecular fingerprints help in database searching and similarity-based drug design? Discuss the advantages and challenges of using 2D and 3D fingerprints.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"49","4","4.2","SECTION-C","49. Summarise the importance of 2D fingerprints in virtual screening. How do they help in identifying drug candidates?","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"50","4","4.3","SECTION-C","50. Discuss the role of 3D pharmacophore keys in drug discovery. How do they help in identifying potential drug-receptor interactions?","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"51","4","4.2","SECTION-D","51. A pharmaceutical company is evaluating five drug candidates based on their molecular descriptors. The table below provides data.
+Analyze the data and interpret the relationship between LogP, TPSA, and Pharmacophore Fit Score. Determine the descriptors are most critical for predicting drug-receptor interactions.
+Compare Drug Candidate C and D in terms of drug-likeness and potential efficacy. Which one would you select for further development and why?","10","K5","","ESSAY","","","","","I23BI5CCT11"
+"1","5","5.1","SECTION-A","1. QSPR models help in predicting which properties of compounds?
+a. Color	b. Molecular Weight	c. Solubility, Boiling Point, Toxicity d. Melting Point only													Key: c","1","K1","","MCQ","","c","","","I23BI5CCT11"
+"2","5","5.1","SECTION-A","2.Toxicity prediction models mainly use which type of data?
+a. Random Chemical Data
+b. Molecular Descriptors and Structural Features
+c. Only Atomic Number
+d. Experimental Data from Inorganic Compounds						Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"3","5","5.2","SECTION-A","3.Which type of descriptors are fragment-based descriptors?
+a. Spectroscopic Descriptors
+b. Molecular Weight-Based Descriptors
+c. Structural Fragments Represented in Bits
+d. Large-Scale Molecular Codes								Key: c","1","K1","","MCQ","","c","","","I23BI5CCT11"
+"4","5","5.2","SECTION-A","4. What is the role of structure-spectra correlations?
+a. Predict molecular mass
+b. Identifying how molecular structure affects spectroscopic properties
+c. Analyze melting point
+d. Determine pH stability									Key: b","1","K1","","MCQ","","b","","","I23BI5CCT11"
+"5","5","5.3","SECTION-A","5.What is the purpose of biochemical pathway modeling?
+a. To analyze metabolic reaction networks
+b. To design furniture
+c. To predict mechanical strength
+d. To simulate gravity										Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"6","5","5.3","SECTION-A","6. LHSA is used for
+a. Computer-Assisted Synthesis Design	b. DNA Sequencing	c. Mass Spectroscopy
+d.Crystallography										Key: a","1","K1","","MCQ","","a","","","I23BI5CCT11"
+"7","5","5.1","SECTION-A","7.Match the following concepts in column A with their corresponding description in column B and choose the correct panel:
+Column A 				Column B
+1. QSPR 				A. Predicts toxicity based on structure
+2. Structure Representation		B.Analyzes molecular descriptors' relationship
+3. Descriptor Analysis			C. Converts structure to numerical form
+4. Model Building			D. Builds mathematical prediction models
+E. Predicts harmful effects of compounds
+a.1D,2C,3B,4A	b.1B,2D,3A,4C  	 c. 1E,2D,3C,4A   	 d. 1C,2E,3B,4D   	Key: a","1","K1","","MATCH","","a","1. QSPR A. Predicts toxicity based on structure | 2. Structure Representation B.Analyzes molecular descriptors' relationship | 3. Descriptor Analysis C. Converts structure to numerical form | 4. Model Building D. Builds mathematical prediction models | E. Predicts harmful effects of compounds | a.1D,2C,3B,4A b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: a","","I23BI5CCT11"
+"8","5","5.2","SECTION-A","8. Match the following descriptors in column A with their corresponding function in column B and choose the correct panel:
+Column A					Column B
+1. Fragment-based Descriptors		A.Structure based on 3D shape
+2. Topological Structure Codes		B. Molecular fragments for analysis
+3. 3D Molecular Descriptors			C. Correlation with molecular properties
+4. Molecular Descriptor Analysis		D. Molecular connectivity and topology
+E. Links structure to spectroscopic data
+a.1D,2C,3B,4A	b.1B,2D,3A,4C  	 c. 1E,2D,3C,4A   	 d. 1C,2E,3B,4D   	Key: b","1","K1","","MATCH","","b","1. Fragment-based Descriptors A.Structure based on 3D shape | 2. Topological Structure Codes B. Molecular fragments for analysis | 3. 3D Molecular Descriptors C. Correlation with molecular properties | 4. Molecular Descriptor Analysis D. Molecular connectivity and topology | E. Links structure to spectroscopic data | a.1D,2C,3B,4A b.1B,2D,3A,4C c. 1E,2D,3C,4A d. 1C,2E,3B,4D Key: b","","I23BI5CCT11"
+"9","5","5.1","SECTION-A","9. What does the acronym ADMET stand for in toxicity prediction?
+a. Absorption, Distribution, Metabolism, Elimination, and Toxicity
+b. Absorption, Diffusion, Metabolism, Evaporation, and Transfer
+c. Analysis, Design, Metabolism, Evaluation, and Transfer
+d. Advanced Design and Metabolism Evaluation Techniques				Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"10","5","5.1","SECTION-A","10. A QSPR model relates molecular descriptors to a measured property of compounds. What does the model primarily enable?
+a. Sequence alignment    b. Property prediction   c. Protein identification  d. Gene annotation
+Key: b","1","K2","","MCQ","","b","","","I23BI5CCT11"
+"11","5","5.2","SECTION-A","11.What is the main advantage of using 3D molecular descriptors?
+a. They provide information about stereochemistry and molecular interactions
+b. They replace all experimental data
+c. They remove the need for chemical databases
+d. They only work for inorganic molecules						Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"12","5","5.2","SECTION-A","12. Which type of descriptor represents a molecule using its constituent structural fragments?
+a. Genomic descriptor		b. Topological descriptor	c. Fragment-based descriptor
+d. Spectral descriptor										 Key: c","1","K2","","MCQ","","c","","","I23BI5CCT11"
+"13","5","5.3","SECTION-A","13.What does SYNCHEM do?
+a. Predicts synthetic pathways  b. Measures acidity levels	c. Modifies nuclear reactions
+d. To stimulate gravity									Key: a","1","K2","","MCQ","","a","","","I23BI5CCT11"
+"14","5","5.3","SECTION-A","14.Which system is associated with computer-based prediction of chemical reactions?
+a. AlphaFold		b. MEDLINE		c. SWATH-MS	d. CAMEO 		Key: d","1","K2","","MCQ","","d","","","I23BI5CCT11"
+"15","5","5.2","SECTION-A","15. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: Fragment-based descriptors, topological structure codes, and three-dimensional molecular descriptors are commonly used in structure-spectra correlation studies.
+Reasoning: These molecular descriptors focus primarily on the 2D structure of compounds and are independent of their 3D arrangement.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"16","5","5.3","SECTION-A","16. In the following pair of statements, one is assertion and the other is the possible reason. Read the statements and choose the correct answer:
+Assertion: Chemical reaction prediction tools like CAMEO and EROS extract knowledge from databases to predict reaction outcomes.
+Reasoning: These tools utilize pre-defined rules and databases to map reactions, and they do not consider the metabolic network involved in biochemical pathways.
+a. Assertion and reason are true statements and the reason is an adequate explanation for assertion.
+b. Both assertion and reason are true statements and the reason is not an adequate explanation for assertion.
+c. Assertion is a true statement and reason is a false statement.
+d. Both assertion and reason are false statements.					Key: c","1","K2","","AR","","c","","","I23BI5CCT11"
+"17","5","5.1","SECTION-A","17. Determine the primary limitation of QSPR models in real-world applications.
+a. They are always 100% accurate.
+b. They require extensive experimental validation.
+c. They can only predict solubility.
+d. They do not use machine learning.								Key: b","1","K3","","MCQ","","b","","","I23BI5CCT11"
+"18","5","5.1","SECTION-A","18. A compound dataset contains molecular structures, calculated descriptors and experimentally measured properties. The dataset supports:
+a. QSPR modeling	b. Reaction mapping	c. Sequence annotation	d. Spectral imaging													Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"19","5","5.2","SECTION-A","19. Determine the usefulness of computer-assisted synthesis design tools
+a. Automatically generate plausible reaction pathways based on known chemistry.
+b. Predict the color change of reaction products.
+c. Replace experimental synthesis completely.
+d. Modify chemical spectra in real-time.							Key: a","1","K3","","MCQ","","a","","","I23BI5CCT11"
+"20","5","5.3","SECTION-A","20. A synthesis planner evaluates alternative reaction sequences for preparing a target molecule using computer-assisted methods. Which tool is associated with this application?
+a. CSD			b. ChEBI		c. SYNCHEM 		d. PRIDE	Key: c","1","K3","","MCQ","","c","","","I23BI5CCT11"
+"21","5","5.1","SECTION-A","21. What is the main advantage of toxicity prediction in drug discovery?","1","K1","","VSA","","","","","I23BI5CCT11"
+"22","5","5.1","SECTION-A","22. Define QSPR and state its application in chemical property prediction.","1","K1","","VSA","","","","","I23BI5CCT11"
+"23","5","5.1","SECTION-A","23. Name the molecular representation commonly used in QSPR analysis and state its purpose.","1","K1","","VSA","","","","","I23BI5CCT11"
+"24","5","5.2","SECTION-A","24. List the various spectroscopic techniques used for structure–property correlation and explain their roles.","1","K1","","VSA","","","","","I23BI5CCT11"
+"25","5","5.2","SECTION-A","25. Describe fragment-based descriptors.","1","K1","","VSA","","","","","I23BI5CCT11"
+"26","5","5.2","SECTION-A","26. State the role of topological structure codes in spectral analysis.","1","K1","","VSA","","","","","I23BI5CCT11"
+"27","5","5.3","SECTION-A","27. Name the open-source cheminformatics toolkit used for molecular structure processing and reaction informatics and state its role.","1","K1","","VSA","","","","","I23BI5CCT11"
+"28","5","5.3","SECTION-A","28. What does LHSA software assist with in cheminformatics?","1","K1","","VSA","","","","","I23BI5CCT11"
+"29","5","5.1","SECTION-A","29. A QSPR model is developed to estimate the boiling points of organic compounds. While it performs well on the training data, its predictions fail on new compounds, Indicate a potential issue.","1","K3","","VSA","","","","","I23BI5CCT11"
+"30","5","5.1","SECTION-A","30. A researcher needs to compare the toxicity of several compounds using measurable toxicological endpoints. Apply toxicity-quantification principles to represent their toxic effects numerically for computational analysis.","1","K3","","VSA","","","","","I23BI5CCT11"
+"31","5","5.2","SECTION-A","31. A forensic scientist finds an unknown chemical sample at a crime scene. They decide to use NMR spectroscopy for identification. How can fragment-based descriptors assist in this process?","1","K3","","VSA","","","","","I23BI5CCT11"
+"32","5","5.2","SECTION-A","32. A research team is working on automating spectral analysis for unknown compounds. Analyze the role that molecular descriptors play in enhancing the accuracy of spectral pattern recognition?","1","K3","","VSA","","","","","I23BI5CCT11"
+"33","5","5.3","SECTION-A","33. A company is developing an AI-driven system for predicting organic reactions. They use CAMEO to assist chemists. How does CAMEO contribute to this process?","1","K3","","VSA","","","","","I23BI5CCT11"
+"34","5","5.3","SECTION-A","34. A target molecule requires multiple synthetic transformations, and several alternative routes are available. Apply synthesis-design principles to organize the reactions into a feasible computational pathway.","1","K3","","VSA","","","","","I23BI5CCT11"
+"35","5","5.1","SECTION-A","35.
+Critically compare the toxicity quantifying methods and justify why a combination approach is needed?","1","K4","","VSA","","","","","I23BI5CCT11"
+"36","5","5.2","SECTION-A","36. Analyze how molecular descriptors contribute to predicting a drug's pharmacokinetics. Provide an example of a key descriptor used in drug discovery.","1","K4","","VSA","","","","","I23BI5CCT11"
+"37","5","5.3","SECTION-A","37. A target compound can be synthesized through multiple possible reaction sequences. Analyze how LHSA can assist in identifying an appropriate computer-assisted synthesis route.","1","K4","","VSA","","","","","I23BI5CCT11"
+"38","5","5.3","SECTION-A","38. A chemist enters a set of reactants and reaction conditions into CAMEO to investigate possible products. The system generates several plausible reaction outcomes. Analyze the predicted products and identify their usefulness in reaction planning.","1","K4","","VSA","","","","","I23BI5CCT11"
+"39","5","5.1","SECTION-B","39. Describe how QSPR models help predict physicochemical properties of compounds based on their molecular structure. Provide examples of properties that can be predicted using QSPR.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"40","5","5.3","SECTION-B","40. A synthetic chemist needs to plan a multistep synthesis for a target molecule by selecting suitable reactions from previously known synthetic routes. Describe how computer-assisted synthesis design using LHSA and SYNCHEM can support the development of the synthetic pathway.","5","K2","","PARAGRAPH","","","","","I23BI5CCT11"
+"41","5","5.1","SECTION-B","41. A biotech firm is designing a new pesticide for agricultural use. Before conducting animal testing, they want to use computational models to predict potential toxicity. Describe how toxicity prediction models work and what key molecular properties should be analyzed.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"42","5","5.2","SECTION-B","42. A chemist is analyzing two structural isomers that have the same molecular formula but different NMR spectra. Discuss how 3D molecular descriptors and conformational differences affect NMR spectra and help in distinguishing isomers.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"43","5","5.3","SECTION-B","43. A research team is working on developing an efficient synthesis pathway for a new anti-cancer drug. They decide to use CAMEO to predict possible reactions. Explain how knowledge extraction from reaction databases helps optimize synthesis planning and improve reaction efficiency.","5","K3","","PARAGRAPH","","","","","I23BI5CCT11"
+"44","5","5.1","SECTION-B","44. A researcher studies ethanol, phenol, acetone and benzoic acid to develop a QSPR model for predicting aqueous solubility. The dataset contains molecular weight, hydrogen-bonding properties, lipophilicity and topological descriptors, along with experimentally measured solubility values. Analyze the descriptor information and formulate an appropriate strategy for building a QSPR model for these compounds.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"45","5","5.2","SECTION-B","45.A chemist is analyzing the IR spectra of three unknown compounds and has collected the following data
+From the given IR absorption values, derive the possible functional groups in each compound. Justify using structure-spectra correlation principles.","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"46","5","5.3","SECTION-B","46. A researcher is planning a synthetic route for an anti-inflammatory drug using CAMEO for reaction prediction. They have identified the following reaction data from the database
+Analyze the reaction pathway and explain how CAMEO or other computer-assisted synthesis design tools help in predicting reaction outcomes. If an alternative route were proposed using catalytic hydrogenation instead of Fe/HCl, how might that affect the reaction efficiency?","5","K4","","PARAGRAPH","","","","","I23BI5CCT11"
+"47","5","5.1","SECTION-C","47. Compare QSPR and QSAR, explaining their similarities and differences. Provide examples of how each method is applied in drug discovery and material science.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"48","5","5.2","SECTION-C","48. Explain the significance of 3D molecular descriptors in spectral analysis. Discuss how molecular conformation and spatial arrangement affect spectral properties.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"49","5","5.3","SECTION-C","49. Explain how reaction databases like CAMEO and EROS help in predicting new chemical reactions. Describe how they contribute to synthetic route optimization.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"50","5","5.3","SECTION-C","50. Discuss the role of CASD tools like SYNCHEM and LHSA in planning and optimizing reaction pathways. Explain how they help to reduce experimental errors and improve efficiency in synthesis design.","10","K2","","ESSAY","","","","","I23BI5CCT11"
+"1","5","5.1","SECTION-D","1. A pharmaceutical research team is developing a QSPR model to predict the aqueous solubility of drug molecules. The dataset consists of 50 drug molecules with their corresponding molecular descriptors. The objective is to construct a reliable QSPR model that can accurately predict aqueous solubility for new drug compounds, aiding drug formulation and development. Explain the steps involved to design a model.","10","K5","","ESSAY","","","","","I23BI5CCT11"

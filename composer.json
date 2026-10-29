@@ -1,0 +1,20 @@
+{
+  "name": "holy-cross-college/coe-question-paper-system",
+  "description": "COE Question Paper System - PHP document and spreadsheet processing stack",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "phpoffice/phpword": "^1.4",
+    "phpoffice/phpspreadsheet": "^5.1"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "autoload": {
+    "classmap": [
+      "includes/",
+      "api/"
+    ]
+  }
+}
