@@ -1,0 +1,21 @@
+# V26 – HOD Course Blueprint + COE 30Q Sync
+
+- HOD `question_bank_blueprint.php` is strictly course/department scoped.
+- HODs can create, filter, edit, publish and archive course Question Bank Blueprints.
+- Teaching staff see only published blueprints for courses assigned to them through timetable allocation.
+- COE OBE `blueprint.php` no longer exposes the 275-question master matrix in the UI.
+- COE 30-question matrix now synchronizes only from the HOD-published Question Bank Blueprint.
+- Sync preserves every HOD blueprint row, including repeated Unit/Sub-Unit rows.
+- COE 30Q rows show Section, Unit, Sub-Unit, Question Type, K-Level, CO, Marks, Required, Available and Question Number(s).
+- Added unit/sub-unit shortage validation. Example: if 4 questions are selected from a unit whose cumulative pool contains only 3, saving is blocked with an explicit shortage message.
+- Added duplicate selected-question validation in the COE 30Q matrix.
+- Added HOD-side cumulative pool validation before a QBB draft can be saved/published.
+- Replaced technical choice labels with official paper instructions:
+  - Answer ALL the questions:
+  - II Answer the following in one or two sentences each:
+  - Answer FIVE questions, selecting one from each set:
+  - Answer any TWO questions:
+  - Answer the following Question (COMPULSORY):
+- Standard question-bank CSV now stores course code once in the header and never repeats it per question.
+- Standard CSV/DOCX templates use ordered question numbers and explicit Unit, Sub-Unit, Section, Marks, K-Level, CO, Question Type, options, answer, image and formula fields.
+- CSV importer accepts the one-time `COURSE CODE,<code>` header and applies it to the imported question set.
