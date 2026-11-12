@@ -202,6 +202,15 @@ if (!$user) return;
           <span class="sidebar-label">Final Slot Allocation</span>
         </a>
 
+        <!-- Submit Course (Consolidated Review) -->
+        <a href="<?php echo $baseUrl; ?>/modules/teaching/submit_course.php" class="sidebar-link flex items-center justify-between px-3 py-2.5 rounded-2xl font-bold transition group <?php echo strpos($currentScript, 'teaching/submit_course.php') !== false ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/10 text-blue-300 border border-blue-500/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'; ?>" title="Submit Course to HOD - Consolidated Review">
+          <div class="flex items-center space-x-3 min-w-0">
+            <i data-lucide="send" class="w-4 h-4 text-blue-400 group-hover:scale-110 transition shrink-0"></i>
+            <span class="sidebar-label truncate">Submit Course</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-blue-400/60 shrink-0"></i>
+        </a>
+
         <!-- My Question Banks -->
         <a href="<?php echo $baseUrl; ?>/modules/teaching/corrections.php" class="sidebar-link flex items-center justify-between px-3 py-2.5 rounded-2xl font-bold transition group <?php echo strpos($currentScript, 'teaching/corrections.php') !== false ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-300 border border-orange-500/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'; ?>" title="Corrections">
           <div class="flex items-center space-x-3 min-w-0">
@@ -506,6 +515,15 @@ $isBankActive = strpos($currentScript, 'corrections.php') !== false || strpos($c
         <div class="truncate">
           <div class="font-bold text-white text-xs truncate">Course Blueprint</div>
           <div class="text-[9px] text-slate-400">HOD Matrix</div>
+        </div>
+      </a>
+      <a href="<?php echo $baseUrl; ?>/modules/teaching/submit_course.php" class="bg-slate-900 border border-slate-800 hover:border-slate-700 p-3 rounded-2xl flex items-center space-x-2.5 transition">
+        <div class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+          <i data-lucide="send" class="w-4 h-4"></i>
+        </div>
+        <div class="truncate">
+          <div class="font-bold text-white text-xs truncate">Submit Course</div>
+          <div class="text-[9px] text-slate-400">HOD Review</div>
         </div>
       </a>
       <?php endif; ?>
