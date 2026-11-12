@@ -1,0 +1,59 @@
+{
+  "schema_version": "2.0",
+  "metadata": {
+    "template": "HCC Question Bank",
+    "note": "One object in questions = one logical question/pool item"
+  },
+  "questions": [
+    {
+      "q_number": 1,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 2,
+      "k_level": "K1",
+      "co_level": "CO1",
+      "question_text": "Define the key concept in one or two sentences.",
+      "formula_latex": ""
+    },
+    {
+      "q_number": 2,
+      "unit_no": 1,
+      "section_type": "Part A",
+      "marks": 2,
+      "k_level": "K2",
+      "co_level": "CO1",
+      "question_text": "Explain the difference between the two concepts with a suitable example.",
+      "formula_latex": ""
+    },
+    {
+      "q_number": 3,
+      "unit_no": 1,
+      "section_type": "Part B",
+      "marks": 13,
+      "k_level": "K3",
+      "co_level": "CO1",
+      "question_text": "Solve the following problem and show all required steps. $x^2+5x+6=0$.",
+      "formula_latex": "x^2+5x+6=0"
+    },
+    {
+      "q_number": 4,
+      "unit_no": 2,
+      "section_type": "Part B",
+      "marks": 13,
+      "k_level": "K4",
+      "co_level": "CO2",
+      "question_text": "Analyze the given case study. Include the required diagram/formula if applicable.",
+      "formula_latex": ""
+    },
+    {
+      "q_number": 5,
+      "unit_no": 3,
+      "section_type": "Part C",
+      "marks": 15,
+      "k_level": "K5",
+      "co_level": "CO3",
+      "question_text": "Design a solution for the given problem and justify your approach.",
+      "formula_latex": ""
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+DEAN QUESTION RULES — TOTAL-MARKS KEY UPDATE
+
+1. Back up the project folder and the hccweb database.
+2. Import database/migrate_question_rules_total_marks.sql into the hccweb database.
+3. Replace the project files with this ZIP's files (or extract over the existing project after backing it up).
+4. Sign in as Dean and open modules/dean/question_rules.php.
+5. Configure a rule set separately for each Total Marks + Academic Year + Year of Programme + Semester combination.
+6. Open the Teaching portal, select the allocated course, confirm the four-value Rule context, and save the Final Question Slot Allocation.
+
+Important:
+- Do not run this migration against a different database without first checking its question_rules rows and paper_types_json configuration.
+- The migration keeps course_type for compatibility, but all new rule rows store '*'. Rule lookup does not filter by course_type.
+- The migration prints any rows that remain at total_marks=0. Such rows are not eligible for matching and must be reviewed manually.
+- No live database/browser acceptance test was run while building this package. PHP and JavaScript syntax checks were run.

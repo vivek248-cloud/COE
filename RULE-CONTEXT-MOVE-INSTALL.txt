@@ -1,0 +1,13 @@
+Teaching Rule Context UI Move
+
+Replace only:
+  modules/teaching/upload.php
+
+The Academic Year, Year of Programme, Semester, Total Marks and Question Language
+controls now live together in the existing allocated-course context area at the top
+of the Teaching page. The duplicate Rule Context panel was removed from the Final
+Question Slot Allocation tab. The same shared field values are still sent to the
+existing server-side resolver and save endpoints.
+
+No database migration is required for this UI-only change.
+Back up the existing file before replacing it, then use Ctrl+F5 in the browser.

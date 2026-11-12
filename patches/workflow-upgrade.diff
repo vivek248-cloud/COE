@@ -1,0 +1,1551 @@
+--- a/api/coe_final_allotment.php
++++ b/api/coe_final_allotment.php
+@@ -16,6 +16,7 @@
+ require_once __DIR__ . '/../config/db.php';
+ require_once __DIR__ . '/../includes/auth.php';
+ require_once __DIR__ . '/../includes/system.php';
++require_once __DIR__ . '/../includes/workflow.php';
+ 
+ function qps_coe_json(array $data, int $status = 200): void
+ {
+@@ -24,12 +25,14 @@
+     exit;
+ }
+ 
+-if (!isLoggedIn() || !isCOE()) {
++if (!isLoggedIn() || qps_workflow_role() !== 'COE') {
+     qps_coe_json(['success' => false, 'message' => 'COE access required.'], 403);
+ }
+ 
+ $pdo = getDBConnection();
+ $actor = getCurrentUser();
++qps_ensure_aux_schema($pdo);
++qps_ensure_workflow_schema($pdo);
+ 
+ function qps_coe_table_columns(PDO $pdo, string $table): array
+ {
+@@ -220,6 +223,13 @@
+                     exam_type, total_marks, status, slots_config
+              FROM qps_final_blueprints
+              WHERE slots_config IS NOT NULL AND TRIM(COALESCE(slots_config, '')) <> ''
++               AND (
++                 NOT EXISTS (SELECT 1 FROM qps_submission_packages p WHERE UPPER(p.paper_code)=UPPER(qps_final_blueprints.paper_code)
++                   AND p.semester=qps_final_blueprints.semester AND p.academic_year=qps_final_blueprints.academic_year AND p.exam_type=qps_final_blueprints.exam_type)
++                 OR EXISTS (SELECT 1 FROM qps_submission_packages p WHERE UPPER(p.paper_code)=UPPER(qps_final_blueprints.paper_code)
++                   AND p.semester=qps_final_blueprints.semester AND p.academic_year=qps_final_blueprints.academic_year AND p.exam_type=qps_final_blueprints.exam_type
++                   AND p.status IN ('COE_APPROVED','ALLOTTED','PAPER_GENERATED'))
++               )
+              ORDER BY id DESC"
+         );
+ 
+@@ -275,6 +285,12 @@
+     if (!$blueprint) {
+         throw new RuntimeException('The selected blueprint is not ACTIVE or no longer exists. Refresh the page and select an active blueprint.');
+     }
++    $stWorkflow=$pdo->prepare("SELECT status FROM qps_submission_packages WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? AND exam_type=? ORDER BY id DESC LIMIT 1");
++    $stWorkflow->execute([$blueprint['paper_code'],$blueprint['semester'],$blueprint['academic_year'],$blueprint['exam_type']]);
++    $workflowStatus=$stWorkflow->fetchColumn();
++    if($workflowStatus!==false && !in_array($workflowStatus,['COE_APPROVED','ALLOTTED','PAPER_GENERATED'],true)){
++        throw new RuntimeException('This course is not yet approved by COE for final allotment.');
++    }
+ 
+     $slots = qps_coe_normalize_slots($blueprint['slots_config'] ?? '');
+     if (!$slots) {
+@@ -282,6 +298,7 @@
+     }
+ 
+     $paperCode = strtoupper(trim((string)$blueprint['paper_code']));
++    qps_refresh_question_is_used($pdo,$paperCode,(string)($blueprint['semester']??''),(string)($blueprint['academic_year']??''));
+     if ($paperCode === '') {
+         throw new RuntimeException('The selected blueprint has no paper/course code.');
+     }
+@@ -304,7 +321,7 @@
+                     q.sub_unit, q.question_type, q.marks, q.k_level, q.co_level,
+                     q.section_type, q.options_json, q.answer_key,
+                     q.match_column_a, q.match_column_b, q.assertion_text,
+-                    q.reason_text, q.question_json, q.image_url
++                    q.reason_text, q.question_json, q.image_url, q.is_used, q.times_used, q.last_used_year
+              FROM qps_coe_question_allotments a
+              LEFT JOIN questions q ON q.id = a.question_id
+              WHERE a.final_blueprint_id = ?"
+@@ -322,7 +339,7 @@
+                     q.unit_no, q.sub_unit, q.question_type, q.marks, q.k_level,
+                     q.co_level, q.section_type, q.options_json, q.answer_key,
+                     q.match_column_a, q.match_column_b, q.assertion_text,
+-                    q.reason_text, q.question_json, q.image_url
++                    q.reason_text, q.question_json, q.image_url, q.is_used, q.times_used, q.last_used_year
+              FROM questions q
+              INNER JOIN question_banks b ON b.id = q.bank_id
+              WHERE UPPER(TRIM(b.paper_code)) = UPPER(?)
+@@ -336,7 +353,7 @@
+         // applies the slot's exact unit/subunit/marks/type/K/CO filters.
+         foreach ($pool as &$question) {
+             $usage = qps_coe_prior_usage($pdo, $paperCode, $question, $blueprint);
+-            $question['previously_used'] = ($usage && !empty($usage['is_used'])) ? 1 : 0;
++            $question['previously_used'] = !empty($question['is_used']) ? 1 : 0;
+             $question['previous_usage_message'] = (string)($usage['message'] ?? '');
+         }
+         unset($question);
+@@ -356,6 +373,8 @@
+         if (!is_array($payload)) {
+             throw new RuntimeException('Invalid JSON request body.');
+         }
++        $csrf=(string)($_SESSION['qps_review_csrf']??'');
++        if($csrf===''||!hash_equals($csrf,(string)($payload['csrf']??''))) throw new RuntimeException('Security token expired. Refresh the page.');
+         $chosen = $payload['assignments'] ?? [];
+         if (!is_array($chosen)) {
+             throw new RuntimeException('Invalid assignment payload.');
+@@ -431,13 +450,8 @@
+                     }
+                 }
+ 
+-                $usage = qps_coe_prior_usage($pdo, $paperCode, $question, $blueprint);
+-                if ($usage && !empty($usage['is_used'])) {
+-                    throw new RuntimeException(
+-                        'A selected question was used in an earlier examination: ' .
+-                        (string)($usage['message'] ?? 'previous usage detected')
+-                    );
+-                }
++                // Previously used questions remain selectable. The UI dims them and
++                // offers an optional hide-used toggle; duplicate current assignments are rejected above.
+             }
+ 
+             $delete = $pdo->prepare("DELETE FROM qps_coe_question_allotments WHERE final_blueprint_id = ?");
+@@ -469,6 +483,22 @@
+                 ]);
+             }
+ 
++            // Persist usage metadata at allotment time without changing the assignment algorithm.
++            $usageInsert=$pdo->prepare("INSERT INTO question_usage_history
++                (paper_code,question_id,paper_id,unit_no,sub_unit,k_level,academic_year,exam_session,picked_at)
++                SELECT ?,q.id,NULL,q.unit_no,q.sub_unit,q.k_level,?,?,NOW() FROM questions q
++                WHERE q.id=? AND NOT EXISTS (
++                  SELECT 1 FROM question_usage_history h WHERE h.paper_code=? AND h.question_id=? AND h.academic_year=? AND h.exam_session=?
++                )");
++            $usageUpdate=$pdo->prepare("UPDATE questions SET times_used=COALESCE(times_used,0)+1,last_used_exam=?,last_used_semester=?,last_used_year=? WHERE id=?");
++            foreach($selectedIds as $questionId=>$slotKey){
++                $usageInsert->execute([$paperCode,$blueprint['academic_year']??null,$blueprint['semester']??'',(int)$questionId,$paperCode,(int)$questionId,$blueprint['academic_year']??null,$blueprint['semester']??'']);
++                if($usageInsert->rowCount()>0){
++                    $usageUpdate->execute([$blueprint['exam_type']??'', $blueprint['semester']??'', $blueprint['academic_year']??'', (int)$questionId]);
++                }
++            }
++            qps_refresh_question_is_used($pdo,$paperCode,(string)($blueprint['semester']??''),(string)($blueprint['academic_year']??''));
++
+             if (function_exists('qps_audit')) {
+                 qps_audit($pdo, 'COE_FINAL_QUESTION_ALLOTMENT_SAVED', 'FINAL_BLUEPRINT', (string)$blueprintId, [
+                     'paper_code' => $paperCode,
+@@ -477,6 +507,12 @@
+             }
+ 
+             $pdo->commit();
++            try {
++                $stPkg=$pdo->prepare("SELECT id,status FROM qps_submission_packages WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? AND exam_type=? ORDER BY id DESC LIMIT 1");
++                $stPkg->execute([$paperCode,$blueprint['semester']??'',$blueprint['academic_year']??'',$blueprint['exam_type']??'']);
++                $pkg=$stPkg->fetch(PDO::FETCH_ASSOC);
++                if($pkg && $pkg['status']==='COE_APPROVED') qps_transition($pdo,(int)$pkg['id'],'COE_ALLOT','Final question allotment saved.');
++            } catch(Throwable $workflowError) { error_log('Workflow allotment transition: '.$workflowError->getMessage()); }
+             qps_coe_json([
+                 'success' => true,
+                 'assigned_count' => count($selectedIds),
+
+--- a/api/export_docx.php
++++ b/api/export_docx.php
+@@ -6,36 +6,72 @@
+ require_once __DIR__ . '/../config/config.php';
+ require_once __DIR__ . '/../config/db.php';
+ require_once __DIR__ . '/../includes/auth.php';
++require_once __DIR__ . '/../includes/paper_rebuild.php';
+ 
+ requireAuth();
+ $pdo = getDBConnection();
+ 
++$setKey = trim((string)($_GET['set_key'] ?? ''));
+ $paperId = isset($_GET['paper_id']) ? intval($_GET['paper_id']) : (isset($_GET['id']) ? intval($_GET['id']) : 0);
+-if (!$paperId) {
+-    http_response_code(400);
+-    die('Question paper ID required.');
+-}
+ 
+ try {
+-    $stmt = $pdo->prepare("SELECT * FROM generated_papers WHERE id = ?");
+-    $stmt->execute([$paperId]);
+-    $row = $stmt->fetch();
+-
+-    if (!$row) {
+-        http_response_code(404);
+-        die('Generated paper not found.');
++    if ($setKey !== '') {
++        $rebuilt = qps_rebuild_paper($pdo, $setKey);
++        $groups = [];
++        foreach ($rebuilt['questions'] as $q) {
++            $section = (string)($q['section_type'] ?? 'SECTION-A');
++            $text = (string)($q['question_text'] ?? '');
++            if (!empty($q['options']) && is_array($q['options'])) {
++                foreach (array_values($q['options']) as $i=>$option) $text .= "\n" . chr(65+$i) . ') ' . (string)$option;
++            }
++            $groups[$section][] = [
++                'display_qno'=>$q['print_number']??$q['q_number']??'',
++                'q_number'=>$q['print_number']??$q['q_number']??'',
++                'question_text'=>$text,
++                'k_level'=>$q['k_level']??'',
++                'co_level'=>$q['co_level']??'',
++                'marks'=>$q['marks']??0,
++                'image_url'=>$q['image_url']??''
++            ];
++        }
++        $sections=[];
++        $paperSectionConfigs=$rebuilt['paper_type']['sections']??[];
++        foreach($groups as $section=>$qs){
++            $code=preg_replace('/^SECTION[-_]?/i','',$section);$cfg=null;
++            foreach($paperSectionConfigs as $candidate){if(strtoupper((string)($candidate['code']??''))===strtoupper($code)){$cfg=$candidate;break;}}
++            $sections[]=['section_name'=>$cfg['title']??str_replace(['SECTION-','_'],['Section ',' '],$section),
++                'choice_formula'=>$cfg['choice_formula']??'','instruction'=>$cfg['instruction']??'',
++                'total_marks'=>array_sum(array_map(static fn($q)=>(int)($q['marks']??0),$qs)),'questions'=>$qs];
++        }
++        $paper=[
++            'paper_code'=>$rebuilt['paper_code'],'course_title'=>$rebuilt['course_title'],
++            'set_name'=>$rebuilt['set_name'],'semester'=>$rebuilt['semester'],
++            'academic_year'=>$rebuilt['academic_year'],'exam_type'=>$rebuilt['exam_type'],
++            'total_marks'=>$rebuilt['total_marks'],'sections'=>$sections,
++            'institution'=>$rebuilt['header']['institution']??'HOLY CROSS COLLEGE (AUTONOMOUS), TIRUCHIRAPPALLI – 620 002',
++            'header_lines'=>$rebuilt['header']['lines']??[]
++        ];
++        $paperCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['paper_code']);
++        $setName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['set_name']);
++        $fileId = preg_replace('/[^a-zA-Z0-9_-]/', '_', $setKey);
++    } else {
++        if (!$paperId) { http_response_code(400); die('Question paper ID or set key required.'); }
++        $stmt = $pdo->prepare("SELECT * FROM generated_papers WHERE id = ?");
++        $stmt->execute([$paperId]);
++        $row = $stmt->fetch();
++        if (!$row) { http_response_code(404); die('Generated paper not found.'); }
++        $paper = json_decode($row['paper_data_json'], true) ?: [];
++        $paper['id'] = $row['id'];
++        $paperCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['paper_code'] ?? ($row['paper_code'] ?? 'HCC_PAPER'));
++        $setName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['set_name'] ?? ($row['set_name'] ?? 'SET_A'));
++        $fileId = (string)$paperId;
+     }
+-
+-    $paper = json_decode($row['paper_data_json'], true) ?: [];
+-    $paper['id'] = $row['id'];
+-    $paperCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['paper_code'] ?? ($row['paper_code'] ?? 'HCC_PAPER'));
+-    $setName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $paper['set_name'] ?? ($row['set_name'] ?? 'SET_A'));
+ 
+     // Create temporary files
+     $tmpDir = sys_get_temp_dir() . '/hcc_docx_' . uniqid();
+     if (!is_dir($tmpDir)) @mkdir($tmpDir, 0777, true);
+ 
+-    $jsonFile = $tmpDir . '/paper_' . $paperId . '.json';
++    $jsonFile = $tmpDir . '/paper_' . $fileId . '.json';
+     $docxFile = $tmpDir . '/' . $paperCode . '_' . $setName . '.docx';
+ 
+     file_put_contents($jsonFile, json_encode($paper, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+--- a/api/save_draft_question.php
++++ b/api/save_draft_question.php
+@@ -29,6 +29,10 @@
+     }
+ 
+     $action = trim((string)($input['action'] ?? 'save_question'));
++    if (in_array($action, ['save_question','update_question','delete_question','submit_to_hod'], true)) {
++        $csrf=(string)($_SESSION['qps_review_csrf']??'');
++        if($csrf===''||!hash_equals($csrf,(string)($input['csrf']??''))) throw new RuntimeException('Security token expired. Refresh the page.');
++    }
+     $paperCode = strtoupper(trim((string)($input['paper_code'] ?? ($input['course_code'] ?? ($input['course'] ?? '')))));
+     $semester = trim((string)($input['semester'] ?? 'Semester 1'));
+     $academicYear = trim((string)($input['academic_year'] ?? (defined('DEFAULT_ACADEMIC_YEAR') ? DEFAULT_ACADEMIC_YEAR : '2026-2027')));
+@@ -104,15 +108,27 @@
+             $draftId = (int)$draftRow['id'];
+         } else {
+             // Find course title & dept
+-            $stC = $pdo->prepare("SELECT coursetitle, dept_code FROM courses WHERE UPPER(coursecode) = UPPER(?) LIMIT 1");
++            $stC = $pdo->prepare("SELECT coursetitle, dept_code, level, programme, papertype, coursetype, coursetype1, maxmark FROM courses WHERE UPPER(coursecode) = UPPER(?) LIMIT 1");
+             $stC->execute([$paperCode]);
+-            $cRow = $stC->fetch(PDO::FETCH_ASSOC);
++            $cRow = $stC->fetch(PDO::FETCH_ASSOC) ?: [];
+             $courseTitle = $cRow['coursetitle'] ?? $paperCode;
+             $deptCode = $cRow['dept_code'] ?? ($user['dept_code'] ?? 'GEN');
+-
+-            $stInsD = $pdo->prepare("INSERT INTO qps_question_bank_drafts (staff_code, dept_code, dept_name, paper_code, course_title, semester, academic_year, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', NOW(), NOW())");
+-            $stInsD->execute([$staffCode, $deptCode, $user['department'] ?? '', $paperCode, $courseTitle, $semester, $academicYear]);
++            $courseType = strtoupper(trim((string)($cRow['papertype'] ?? $cRow['coursetype1'] ?? $cRow['coursetype'] ?? 'OBE')));
++            $programmeLevel = trim((string)($cRow['level'] ?? ''));
++            if ($programmeLevel === '') $programmeLevel = trim((string)($cRow['programme'] ?? ''));
++
++            $stInsD = $pdo->prepare("INSERT INTO qps_question_bank_drafts (staff_code, dept_code, dept_name, paper_code, course_title, course_type, degree_level, max_marks, semester, academic_year, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', NOW(), NOW())");
++            $stInsD->execute([$staffCode, $deptCode, $user['department'] ?? '', $paperCode, $courseTitle, $courseType ?: 'OBE', $programmeLevel ?: null, (int)($cRow['maxmark'] ?? 75), $semester, $academicYear]);
+             $draftId = (int)$pdo->lastInsertId();
++        }
++
++        if ($draftId > 0) {
++            $pdo->prepare("UPDATE qps_question_bank_drafts d
++                JOIN courses c ON UPPER(c.coursecode)=UPPER(d.paper_code)
++                SET d.course_type=COALESCE(NULLIF(c.papertype,''),NULLIF(c.coursetype1,''),NULLIF(c.coursetype,''),d.course_type,'OBE'),
++                    d.degree_level=COALESCE(NULLIF(c.programme,''),NULLIF(c.level,''),d.degree_level),
++                    d.max_marks=COALESCE(NULLIF(c.maxmark,''),NULLIF(d.max_marks,0),75)
++                WHERE d.id=?")->execute([$draftId]);
+         }
+ 
+         if ($questionId > 0) {
+@@ -254,42 +270,7 @@
+     // 3. SUBMIT DRAFT QUESTION BANK TO HOD
+     // ----------------------------------------------------
+     if ($action === 'submit_to_hod') {
+-        $draftId = (int)($input['draft_id'] ?? 0);
+-        if ($draftId <= 0 && $paperCode !== '') {
+-            $stD = $pdo->prepare("SELECT id FROM qps_question_bank_drafts WHERE UPPER(paper_code) = UPPER(?) AND staff_code = ? ORDER BY id DESC LIMIT 1");
+-            $stD->execute([$paperCode, $staffCode]);
+-            $draftId = (int)$stD->fetchColumn();
+-        }
+-
+-        if ($draftId <= 0) {
+-            throw new RuntimeException('Draft Question Bank not found.');
+-        }
+-
+-        // Count questions
+-        $stCnt = $pdo->prepare("SELECT COUNT(*) FROM qps_question_bank_draft_questions WHERE draft_id = ?");
+-        $stCnt->execute([$draftId]);
+-        $count = (int)$stCnt->fetchColumn();
+-
+-        if ($count < 1) {
+-            throw new RuntimeException('Please enter at least one question before submitting to HOD.');
+-        }
+-
+-        $now = date('Y-m-d H:i:s');
+-        $pdo->prepare("UPDATE qps_question_bank_drafts SET status = 'SUBMITTED_TO_HOD', submitted_at = ?, updated_at = ? WHERE id = ?")
+-            ->execute([$now, $now, $draftId]);
+-
+-        qps_audit($pdo, 'DRAFT_SUBMITTED_TO_HOD', 'DRAFT_BANK', (string)$draftId, [
+-            'paper_code' => $paperCode,
+-            'total_questions' => $count
+-        ]);
+-
+-        echo json_encode([
+-            'success' => true,
+-            'draft_id' => $draftId,
+-            'status' => 'SUBMITTED_TO_HOD',
+-            'message' => "Question Bank ({$count} questions) successfully submitted to Head of Department (HOD) for verification!"
+-        ], JSON_UNESCAPED_UNICODE);
+-        exit;
++        throw new RuntimeException('Direct draft submission is disabled. Submit through the validated Staff workflow so the Question Bank, Question Bank Blueprint and Final Blueprint are checked together.');
+     }
+ 
+     throw new RuntimeException('Unsupported action requested.');
+
+--- a/api/save_final_blueprint_slots.php
++++ b/api/save_final_blueprint_slots.php
+@@ -5,16 +5,26 @@
+ require_once __DIR__.'/../config/db.php';
+ require_once __DIR__.'/../includes/auth.php';
+ require_once __DIR__.'/../includes/system.php';
+-if (!isLoggedIn() || isCOE()) { http_response_code(403); echo json_encode(['success'=>false,'message'=>'Only teaching staff / HOD can define blueprint slots.']); exit; }
++require_once __DIR__.'/../includes/question_rules.php';
++require_once __DIR__.'/../includes/workflow.php';
++if (!isLoggedIn() || qps_workflow_role() !== 'STAFF') { http_response_code(403); echo json_encode(['success'=>false,'message'=>'Only the submitting teaching staff member can define blueprint slots.']); exit; }
+ $pdo=getDBConnection(); $user=getCurrentUser(); qps_ensure_question_draft_schema($pdo);
+ try {
+  $raw=file_get_contents('php://input');$in=json_decode((string)$raw,true);if(!is_array($in))$in=array_merge($_GET,$_POST);
+  $action=trim((string)($in['action']??'save_slots'));
++ if($action==='save_slots'){
++  $csrf=(string)($_SESSION['qps_review_csrf']??'');
++  if($csrf===''||!hash_equals($csrf,(string)($in['csrf']??'')))throw new RuntimeException('Security token expired. Refresh the page.');
++ }
+  $code=strtoupper(trim((string)($in['paper_code']??$in['course_code']??'')));
+  $sem=trim((string)($in['semester']??'Semester 1'));
+  $year=trim((string)($in['academic_year']??(defined('DEFAULT_ACADEMIC_YEAR')?DEFAULT_ACADEMIC_YEAR:'2026-2027')));
+  $exam=trim((string)($in['exam_type']??'Odd Semester End Examination'));
+  if($code==='')throw new RuntimeException('Course code is required.');
++ $staffCode=(string)($user['staff_code']??'');
++ $stAssigned=$pdo->prepare("SELECT 1 FROM timetablefaculty WHERE UPPER(fid)=UPPER(?) AND UPPER(papercode)=UPPER(?) LIMIT 1");
++ $stAssigned->execute([$staffCode,$code]);
++ if(!$stAssigned->fetchColumn())throw new RuntimeException('You are not assigned to this course.');
+  if($action==='load_slots'){
+   $st=$pdo->prepare("SELECT * FROM qps_final_blueprints WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? AND exam_type=? AND UPPER(status)='ACTIVE' ORDER BY id DESC LIMIT 1");
+   $st->execute([$code,$sem,$year,$exam]);$bp=$st->fetch(PDO::FETCH_ASSOC);
+@@ -46,6 +56,21 @@
+   ];
+  }
+  if(!$normal)throw new RuntimeException('No valid slots supplied.');
++
++ // Resolve the rule context from the persisted bank/course metadata; never trust browser K/CO.
++ $ctx = ['paper_code'=>$code,'semester'=>$sem,'academic_year'=>$year];
++ $stCtx=$pdo->prepare("SELECT course_type,degree_level,dept_code FROM qps_question_bank_drafts WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? ORDER BY id DESC LIMIT 1");
++ $stCtx->execute([$code,$sem,$year]);$draftCtx=$stCtx->fetch(PDO::FETCH_ASSOC) ?: [];
++ $stCourse=$pdo->prepare("SELECT level,programme,papertype,maxmark,dept_code FROM courses WHERE UPPER(coursecode)=UPPER(?) LIMIT 1");
++ $stCourse->execute([$code]);$courseCtx=$stCourse->fetch(PDO::FETCH_ASSOC) ?: [];
++ $ctx['course_type']=$draftCtx['course_type'] ?? ($courseCtx['papertype'] ?? '');
++ $ctx['programme_level']=$draftCtx['degree_level'] ?? '';
++ if($ctx['programme_level']==='' && !empty($courseCtx['level'])) $ctx['programme_level']=trim((string)$courseCtx['level']);
++ $ctx['total_marks']=(int)($in['total_marks']??($courseCtx['maxmark']??0));
++ $ctx['dept_code']=$draftCtx['dept_code']??($courseCtx['dept_code']??'');
++ $validation=qps_validate_slots($pdo,$ctx,$normal,'draft');
++ if($validation['errors']) throw new RuntimeException(implode("\n",$validation['errors']));
++ $normal=$validation['slots'];
+  $json=json_encode($normal,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+  $pdo->beginTransaction();
+  $st=$pdo->prepare("SELECT id FROM qps_final_blueprints WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? AND exam_type=? ORDER BY id DESC LIMIT 1");
+
+--- a/api/shuffle_generate.php
++++ b/api/shuffle_generate.php
+@@ -36,6 +36,14 @@
+ $pdo = getDBConnection();
+ $user = getCurrentUser() ?: ['staff_code' => 'COE_OFFICE', 'role' => 'COE_ADMIN'];
+ qps_ensure_aux_schema($pdo);
++
++// Retire the old random-pool generator. New paper sets must be derived only
++// from qps_coe_question_allotments via api/coe_paper_sets.php.
++ob_end_clean();
++http_response_code(410);
++echo json_encode(['success'=>false,'message'=>'Legacy random paper generation is disabled. Use the three-step COE generator based on saved final allotments.'],JSON_UNESCAPED_UNICODE);
++exit;
++
+ 
+ function qps_norm_q(string $s): string {
+     $s = strip_tags($s);
+
+--- a/api/verify_bank.php
++++ b/api/verify_bank.php
+@@ -9,6 +9,7 @@
+ require_once __DIR__ . '/../config/db.php';
+ require_once __DIR__ . '/../includes/auth.php';
+ require_once __DIR__ . '/../includes/system.php';
++require_once __DIR__ . '/../includes/workflow.php';
+ 
+ if (!isLoggedIn()) {
+     ob_end_clean();
+@@ -130,74 +131,44 @@
+     // ACTION 2: HOD VERIFY & FORWARD TO COE (or submit_to_coe)
+     // ----------------------------------------------------
+     if ($action === 'hod_verify_and_forward' || $action === 'submit_to_coe') {
+-        if (!isHOD() && !isCOE() && empty($user['is_super_admin'])) {
+-            throw new RuntimeException('Permission denied: Only Head of Department (HOD) or COE can forward question banks.');
+-        }
+-
+-        $now = date('Y-m-d H:i:s');
+-
+-        if ($draft && $draftId > 0) {
+-            // Check unresolved corrections
+-            $stUnresolved = $pdo->prepare("SELECT COUNT(*) FROM qps_question_bank_draft_questions WHERE draft_id = ? AND correction_status = 'NEEDS_CORRECTION'");
+-            $stUnresolved->execute([$draftId]);
+-            $unresolvedCount = (int)$stUnresolved->fetchColumn();
+-
+-            if ($unresolvedCount > 0 && empty($input['force_forward'])) {
+-                throw new RuntimeException("There are {$unresolvedCount} questions marked for correction that have not been resolved yet.");
+-            }
+-
+-            $stUp = $pdo->prepare("UPDATE qps_question_bank_drafts SET 
+-                status = 'SUBMITTED_TO_COE', 
+-                hod_reviewed_by = ?, 
+-                hod_reviewed_at = ?, 
+-                hod_remarks = ?, 
+-                updated_at = ? 
+-                WHERE id = ?");
+-            $stUp->execute([$staffCode, $now, $remarks, $now, $draftId]);
+-
+-            qps_audit($pdo, 'HOD_FORWARDED_TO_COE', 'DRAFT_BANK', (string)$draftId, [
+-                'paper_code' => $effectivePaperCode,
+-                'hod_code' => $staffCode,
+-                'remarks' => $remarks
+-            ]);
+-
+-            ob_end_clean();
+-            echo json_encode([
+-                'success' => true,
+-                'draft_id' => $draftId,
+-                'status' => 'SUBMITTED_TO_COE',
+-                'message' => 'Question Bank verified and successfully submitted to COE Office for final approval.'
+-            ], JSON_UNESCAPED_UNICODE);
+-            exit;
+-        }
+-
+-        if ($existingBank && $bankId > 0) {
+-            $pdo->prepare("UPDATE question_banks SET status = 'SUBMITTED_TO_COE', hod_status = 'approved', hod_reviewed_by = ?, hod_reviewed_at = ?, hod_remarks = ?, updated_at = NOW() WHERE id = ?")
+-                ->execute([$staffCode, $now, $remarks, $bankId]);
+-
+-            qps_audit($pdo, 'HOD_FORWARDED_TO_COE', 'QUESTION_BANK', (string)$bankId, [
+-                'paper_code' => $effectivePaperCode,
+-                'hod_code' => $staffCode,
+-                'remarks' => $remarks
+-            ]);
+-
+-            ob_end_clean();
+-            echo json_encode([
+-                'success' => true,
+-                'bank_id' => $bankId,
+-                'status' => 'SUBMITTED_TO_COE',
+-                'message' => 'Question Bank verified and successfully submitted to COE Office for final approval.'
+-            ], JSON_UNESCAPED_UNICODE);
+-            exit;
+-        }
++        qps_workflow_require_role(['HOD']);
++        $stPkg=$pdo->prepare("SELECT * FROM qps_submission_packages WHERE UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=? AND exam_type=? ORDER BY id DESC LIMIT 1");
++        $stPkg->execute([
++            $effectivePaperCode,
++            (string)($draft['semester'] ?? $existingBank['semester'] ?? ''),
++            (string)($draft['academic_year'] ?? $existingBank['academic_year'] ?? ''),
++            (string)($draft['exam_type'] ?? $existingBank['exam_type'] ?? '')
++        ]);
++        $pkg=$stPkg->fetch(PDO::FETCH_ASSOC);
++        if(!$pkg) throw new RuntimeException('This course has not been submitted through the Staff workflow. Ask the submitting staff member to submit the Question Bank, Question Bank Blueprint and Final Blueprint together.');
++        if($remarks!==''){
++            $pdo->prepare("INSERT INTO qps_remarks(package_id,target_type,target_ref,round_no,author_code,author_name,author_role,to_role,remark_text) VALUES(?,'QBB','QBB',?,?,?,?,'STAFF',?)")
++                ->execute([(int)$pkg['id'],(int)$pkg['round_no'],$staffCode,(string)($user['name']??$staffCode),'HOD',$remarks]);
++            $result=qps_transition($pdo,(int)$pkg['id'],'HOD_RETURN',$remarks);
++            if(!empty($pkg['bank_draft_id']))$pdo->prepare("UPDATE qps_question_bank_drafts SET status='RETURNED_TO_STAFF',updated_at=NOW() WHERE id=?")->execute([(int)$pkg['bank_draft_id']]);
++        } else {
++            $result=qps_transition($pdo,(int)$pkg['id'],'HOD_FORWARD','HOD verified all three submitted artifacts.');
++            if(!empty($pkg['bank_draft_id']))$pdo->prepare("UPDATE qps_question_bank_drafts SET status='SUBMITTED_TO_DEAN',updated_at=NOW() WHERE id=?")->execute([(int)$pkg['bank_draft_id']]);
++        }
++        ob_end_clean();
++        echo json_encode(['success'=>true,'package_id'=>(int)$pkg['id'],'status'=>$result['status'],
++            'message'=>$remarks!==''?'Remarks sent back to the submitting staff member.':'Course verified and forwarded to the Dean.'],JSON_UNESCAPED_UNICODE);
++        exit;
+     }
+ 
+     // ----------------------------------------------------
+     // ACTION 3: COE APPROVE & COMMIT TO MASTER QUESTION BANK (or approve_bank)
+     // ----------------------------------------------------
+     if ($action === 'coe_approve_and_commit' || $action === 'approve_bank') {
+-        if (!isCOE() && empty($user['is_super_admin'])) {
+-            throw new RuntimeException('Permission denied: Only Controller of Examinations (COE) Office can approve question banks.');
++        if (qps_workflow_role() !== 'COE') {
++            throw new RuntimeException('Permission denied: Only an authenticated COE user can approve question banks.');
++        }
++        // New workflow packages must reach COE_APPROVED before legacy bank commit is allowed.
++        $stWorkflowGate=$pdo->prepare("SELECT status FROM qps_submission_packages WHERE (bank_draft_id=? OR (UPPER(paper_code)=UPPER(?) AND semester=? AND academic_year=?)) ORDER BY id DESC LIMIT 1");
++        $stWorkflowGate->execute([$draftId,$effectivePaperCode,(string)($draft['semester']??$existingBank['semester']??''),(string)($draft['academic_year']??$existingBank['academic_year']??'')]);
++        $gateStatus=$stWorkflowGate->fetchColumn();
++        if($gateStatus!==false && !in_array($gateStatus,['COE_APPROVED','ALLOTTED','PAPER_GENERATED'],true)){
++            throw new RuntimeException('COE approval is blocked until the Dean has approved this complete submission package.');
+         }
+ 
+         $now = date('Y-m-d H:i:s');
+
+--- a/docx_generator.py
++++ b/docx_generator.py
+@@ -214,47 +214,62 @@
+     # -------------------------------------------------------------
+     # 1. INSTITUTIONAL HEADER BLOCK
+     # -------------------------------------------------------------
+-    p_inst = doc.add_paragraph()
+-    p_inst.alignment = WD_ALIGN_PARAGRAPH.CENTER
+-    p_inst.paragraph_format.space_before = Pt(0)
+-    p_inst.paragraph_format.space_after = Pt(2)
+-    r_inst = p_inst.add_run(clean_xml_string(paper_data.get('institution', 'HOLY CROSS COLLEGE (AUTONOMOUS), TIRUCHIRAPPALLI – 620 002')))
+-    r_inst.bold = True
+-    r_inst.font.size = Pt(12)
+-    r_inst.font.name = "Times New Roman"
+-
+-    # School Hierarchy Line
+-    school = clean_xml_string(paper_data.get('school_name', 'SCHOOL OF PHYSICAL SCIENCES'))
+-    p_sch = doc.add_paragraph()
+-    p_sch.alignment = WD_ALIGN_PARAGRAPH.CENTER
+-    p_sch.paragraph_format.space_before = Pt(0)
+-    p_sch.paragraph_format.space_after = Pt(2)
+-    r_sch = p_sch.add_run(school)
+-    r_sch.bold = True
+-    r_sch.font.size = Pt(10.5)
+-    r_sch.font.name = "Times New Roman"
+-
+-    # Degree & Exam Line
+-    deg_line = clean_xml_string(paper_data.get('degree_exam_line', 'II U.G. DEGREE EXAMINATION, SEMESTER-III, NOVEMBER 2026'))
+-    p_deg = doc.add_paragraph()
+-    p_deg.alignment = WD_ALIGN_PARAGRAPH.CENTER
+-    p_deg.paragraph_format.space_before = Pt(0)
+-    p_deg.paragraph_format.space_after = Pt(2)
+-    r_deg = p_deg.add_run(deg_line)
+-    r_deg.bold = True
+-    r_deg.font.size = Pt(10)
+-    r_deg.font.name = "Times New Roman"
+-
+-    # Course Part & Discipline Line
+-    part_line = clean_xml_string(paper_data.get('course_part_line', 'PART III - CORE MAJOR'))
+-    p_part = doc.add_paragraph()
+-    p_part.alignment = WD_ALIGN_PARAGRAPH.CENTER
+-    p_part.paragraph_format.space_before = Pt(0)
+-    p_part.paragraph_format.space_after = Pt(4)
+-    r_part = p_part.add_run(part_line)
+-    r_part.bold = True
+-    r_part.font.size = Pt(10)
+-    r_part.font.name = "Times New Roman"
++    header_lines = paper_data.get('header_lines') or []
++    if header_lines:
++        for line_index, header_line in enumerate(header_lines):
++            line_text = header_line.get('line_text', '') if isinstance(header_line, dict) else str(header_line)
++            if not clean_xml_string(line_text):
++                continue
++            p_line = doc.add_paragraph()
++            p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
++            p_line.paragraph_format.space_before = Pt(0)
++            p_line.paragraph_format.space_after = Pt(2 if line_index < len(header_lines) - 1 else 4)
++            r_line = p_line.add_run(clean_xml_string(line_text))
++            r_line.bold = True
++            r_line.font.size = Pt(12 if line_index == 0 else 10.5)
++            r_line.font.name = "Times New Roman"
++    else:
++        p_inst = doc.add_paragraph()
++        p_inst.alignment = WD_ALIGN_PARAGRAPH.CENTER
++        p_inst.paragraph_format.space_before = Pt(0)
++        p_inst.paragraph_format.space_after = Pt(2)
++        r_inst = p_inst.add_run(clean_xml_string(paper_data.get('institution', 'HOLY CROSS COLLEGE (AUTONOMOUS), TIRUCHIRAPPALLI – 620 002')))
++        r_inst.bold = True
++        r_inst.font.size = Pt(12)
++        r_inst.font.name = "Times New Roman"
++
++        # School Hierarchy Line
++        school = clean_xml_string(paper_data.get('school_name', 'SCHOOL OF PHYSICAL SCIENCES'))
++        p_sch = doc.add_paragraph()
++        p_sch.alignment = WD_ALIGN_PARAGRAPH.CENTER
++        p_sch.paragraph_format.space_before = Pt(0)
++        p_sch.paragraph_format.space_after = Pt(2)
++        r_sch = p_sch.add_run(school)
++        r_sch.bold = True
++        r_sch.font.size = Pt(10.5)
++        r_sch.font.name = "Times New Roman"
++
++        # Degree & Exam Line
++        deg_line = clean_xml_string(paper_data.get('degree_exam_line', 'II U.G. DEGREE EXAMINATION, SEMESTER-III, NOVEMBER 2026'))
++        p_deg = doc.add_paragraph()
++        p_deg.alignment = WD_ALIGN_PARAGRAPH.CENTER
++        p_deg.paragraph_format.space_before = Pt(0)
++        p_deg.paragraph_format.space_after = Pt(2)
++        r_deg = p_deg.add_run(deg_line)
++        r_deg.bold = True
++        r_deg.font.size = Pt(10)
++        r_deg.font.name = "Times New Roman"
++
++        # Course Part & Discipline Line
++        part_line = clean_xml_string(paper_data.get('course_part_line', 'PART III - CORE MAJOR'))
++        p_part = doc.add_paragraph()
++        p_part.alignment = WD_ALIGN_PARAGRAPH.CENTER
++        p_part.paragraph_format.space_before = Pt(0)
++        p_part.paragraph_format.space_after = Pt(4)
++        r_part = p_part.add_run(part_line)
++        r_part.bold = True
++        r_part.font.size = Pt(10)
++        r_part.font.name = "Times New Roman"
+ 
+     # Course Title & Paper Code Line Table
+     t_hdr = doc.add_table(rows=1, cols=2)
+
+--- a/includes/auth.php
++++ b/includes/auth.php
+@@ -58,6 +58,7 @@
+  */
+ function isCOE(): bool {
+     if (!isLoggedIn()) return false;
++    if (($_SESSION['qps_static_role'] ?? '') === 'COE') return true;
+     $role = strtoupper(getUserRole());
+     if (in_array($role, ['COE_ADMIN', 'COE_STAFF', 'SUPER_ADMIN', 'ADMIN', 'COE', 'ERP_ADMIN', 'ERP_STAFF'], true)) return true;
+     return isERPStaff();
+@@ -75,7 +76,9 @@
+  * through Faculty login does not activate Dean portal access.
+  */
+ function isDean(): bool {
+-    if (!isLoggedIn() || empty($_SESSION['qps_dean_authenticated'])) return false;
++    if (!isLoggedIn()) return false;
++    if (($_SESSION['qps_static_role'] ?? '') === 'DEAN') return true;
++    if (empty($_SESSION['qps_dean_authenticated'])) return false;
+     $staffCode = trim((string)(getCurrentUser()['staff_code'] ?? ''));
+     if ($staffCode === '') return false;
+     try {
+@@ -84,14 +87,13 @@
+         );
+         $stmt->execute([$staffCode]);
+         return (bool)$stmt->fetchColumn();
+-    } catch (Throwable $e) {
+-        return false; // fail closed if the Dean registry is unavailable
+-    }
++    } catch (Throwable $e) { return false; }
+ }
+ 
+ function requireDean(): void {
+     requireAuth();
+-    if (!isDean() && !isSuperAdmin() && !isERPStaff()) {
++    // Do not grant Dean access merely because an account is ERP or super-admin.
++    if (!isDean()) {
+         http_response_code(403);
+         exit('Access denied. Please sign in through the Dean login.');
+     }
+@@ -127,6 +129,13 @@
+         header("Location: " . getBaseUrl() . "/modules/auth/login.php");
+         exit;
+     }
++    if (!empty($_SESSION['qps_static_must_change'])) {
++        $script = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
++        if ($script !== 'change_static_password.php' && $script !== 'logout.php') {
++            header("Location: " . getBaseUrl() . "/modules/auth/change_static_password.php");
++            exit;
++        }
++    }
+ }
+ 
+ function requireCOE(): void {
+
+--- a/includes/sidebar.php
++++ b/includes/sidebar.php
+@@ -9,6 +9,7 @@
+  *  4. Mobile "More" Slide-Up Bottom Sheet Drawer
+  */
+ require_once __DIR__ . '/auth.php';
++require_once __DIR__ . '/workflow.php';
+ require_once __DIR__ . '/../config/db.php';
+ 
+ $user = getCurrentUser();
+@@ -153,7 +154,19 @@
+       </div>
+     </div>
+ 
+-    <?php if (!$isCoeAdmin): ?>
++    <?php if (!$isCoeAdmin && qps_workflow_role() === 'DEAN'): ?>
++      <div class="space-y-1">
++        <div class="sidebar-section-title px-2 py-1 text-[9px] font-black uppercase tracking-wider text-purple-300">Dean Portal</div>
++        <a href="<?php echo $baseUrl; ?>/modules/review/index.php" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-2xl font-bold text-slate-200 hover:bg-slate-900"><i data-lucide="clipboard-check" class="w-4 h-4"></i><span class="sidebar-label">HOD Submitted Courses</span></a>
++        <a href="<?php echo $baseUrl; ?>/modules/dean/coe_status.php" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-2xl font-bold text-slate-200 hover:bg-slate-900"><i data-lucide="badge-check" class="w-4 h-4"></i><span class="sidebar-label">COE Status</span></a>
++      </div>
++    <?php elseif (!$isCoeAdmin && qps_workflow_role() === 'HOD'): ?>
++      <div class="space-y-1">
++        <div class="sidebar-section-title px-2 py-1 text-[9px] font-black uppercase tracking-wider text-amber-300">HOD Portal</div>
++        <a href="<?php echo $baseUrl; ?>/modules/review/index.php" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-2xl font-bold text-slate-200 hover:bg-slate-900"><i data-lucide="inbox" class="w-4 h-4"></i><span class="sidebar-label">Staff Submitted Courses</span></a>
++        <a href="<?php echo $baseUrl; ?>/modules/review/index.php?queue=dean_remarks" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-2xl font-bold text-slate-200 hover:bg-slate-900"><i data-lucide="message-square-warning" class="w-4 h-4"></i><span class="sidebar-label">Remarks from Deans</span></a>
++      </div>
++    <?php elseif (!$isCoeAdmin): ?>
+       <!-- TEACHING STAFF LINKS -->
+       <div class="space-y-1">
+         <div class="sidebar-section-title px-2 py-1 text-[9px] font-black uppercase tracking-wider text-orange-400">Teaching Staff Portal</div>
+@@ -186,10 +199,10 @@
+         </a>
+ 
+         <!-- My Question Banks -->
+-        <a href="<?php echo $baseUrl; ?>/modules/teaching/view_banks.php" class="sidebar-link flex items-center justify-between px-3 py-2.5 rounded-2xl font-bold transition group <?php echo strpos($currentScript, 'teaching/view_banks.php') !== false ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-300 border border-orange-500/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'; ?>" title="My Question Banks">
++        <a href="<?php echo $baseUrl; ?>/modules/teaching/corrections.php" class="sidebar-link flex items-center justify-between px-3 py-2.5 rounded-2xl font-bold transition group <?php echo strpos($currentScript, 'teaching/corrections.php') !== false ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-300 border border-orange-500/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'; ?>" title="Corrections">
+           <div class="flex items-center space-x-3 min-w-0">
+             <i data-lucide="archive" class="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0"></i>
+-            <span class="sidebar-label truncate">Question Banks</span>
++            <span class="sidebar-label truncate">Corrections</span>
+           </div>
+           <div class="sidebar-badge-text flex items-center gap-1.5 ml-2 shrink-0">
+             <?php if (!empty($badgeStats['my_banks'])): ?>
+@@ -206,6 +219,9 @@
+           <?php endif; ?>
+         </a>
+ 
++        <a href="<?php echo $baseUrl; ?>/modules/teaching/completed_question_banks.php" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-2xl font-bold text-slate-300 hover:bg-slate-900 hover:text-white"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i><span class="sidebar-label">Completed Courses</span></a>
++        <a href="<?php echo $baseUrl; ?>/modules/teaching/draft.php" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-2xl font-bold text-slate-300 hover:bg-slate-900 hover:text-white"><i data-lucide="file-edit" class="w-4 h-4 text-amber-400"></i><span class="sidebar-label">Drafts</span></a>
++
+         <!-- Download Templates -->
+         <!-- <a href="<?php echo $baseUrl; ?>/modules/teaching/download_template.php" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-2xl font-bold transition group <?php echo strpos($currentScript, 'teaching/download_template.php') !== false ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-300 border border-orange-500/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'; ?>" title="Download Import Templates">
+           <i data-lucide="file-spreadsheet" class="w-4 h-4 text-sky-400 group-hover:scale-110 transition shrink-0"></i>
+@@ -349,12 +365,12 @@
+ $navFabUrl = $isCoeAdmin ? "$baseUrl/modules/coe/shuffle.php" : "$baseUrl/modules/teaching/upload.php";
+ $navFabIcon = $isCoeAdmin ? "shuffle" : "upload-cloud";
+ $navFabTitle = $isCoeAdmin ? "Generate Paper" : "Upload Bank";
+-$navBankUrl = $isCoeAdmin ? "$baseUrl/modules/coe/file_manager.php" : "$baseUrl/modules/teaching/view_banks.php";
++$navBankUrl = $isCoeAdmin ? "$baseUrl/modules/coe/file_manager.php" : "$baseUrl/modules/teaching/corrections.php";
+ 
+ $isHomeActive = strpos($currentScript, 'dashboard.php') !== false;
+ $isBpActive = strpos($currentScript, 'blueprint') !== false;
+ $isFabActive = strpos($currentScript, 'upload.php') !== false || strpos($currentScript, 'shuffle.php') !== false;
+-$isBankActive = strpos($currentScript, 'view_banks.php') !== false || strpos($currentScript, 'file_manager.php') !== false;
++$isBankActive = strpos($currentScript, 'corrections.php') !== false || strpos($currentScript, 'view_banks.php') !== false || strpos($currentScript, 'file_manager.php') !== false;
+ ?>
+ 
+ <nav id="qps-mobile-bottom-nav" class="lg:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm mobile-bottom-dock rounded-full px-2 py-1.5 flex items-center justify-between no-print shadow-2xl">
+
+--- a/includes/system.php
++++ b/includes/system.php
+@@ -909,9 +909,13 @@
+         } catch (Throwable $e) {}
+     }
+ 
+-    $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+-    if (strpos($ipAddress, ',') !== false) {
+-        $ipAddress = trim(explode(',', $ipAddress)[0]);
++    // REMOTE_ADDR is authoritative. Only honor X-Forwarded-For when the
++    // immediate peer is explicitly configured as a trusted reverse proxy.
++    $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
++    $trustedProxies = defined('QPS_TRUSTED_PROXIES') && is_array(QPS_TRUSTED_PROXIES) ? QPS_TRUSTED_PROXIES : [];
++    if (in_array($ipAddress, $trustedProxies, true) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
++        $forwarded = trim(explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
++        if (filter_var($forwarded, FILTER_VALIDATE_IP)) $ipAddress = $forwarded;
+     }
+ 
+     try {
+
+--- a/modules/auth/login.php
++++ b/modules/auth/login.php
+@@ -147,7 +147,7 @@
+                         } elseif (preg_match('/^[a-f0-9]{64}$/i', $storedPassword)) {
+                             $valid = hash_equals(strtolower($storedPassword), hash('sha256', $password));
+                         } else {
+-                            $valid = hash_equals($storedPassword, $password) || $password === 'staff@123' || $password === 'hcc123' || $password === '12345';
++                            $valid = hash_equals($storedPassword, $password);
+                         }
+                     } else {
+                         $valid = ($password === 'staff@123' || $password === 'hcc123' || $password === '12345');
+@@ -209,9 +209,24 @@
+         $password = (string)($_POST['dean_password'] ?? '');
+ 
+         if ($staffCode === '' || $password === '') {
+-            $error = 'Please enter both your Dean Staff Code and Password.';
++            $error = 'Please enter your Dean username and Password.';
+         } else {
+             try {
++                // Static Dean account is an additional login path; legacy staff Dean access remains available.
++                $static = $pdo->prepare("SELECT * FROM qps_static_users WHERE LOWER(username)=LOWER(?) AND role='DEAN' AND is_active=1 LIMIT 1");
++                $static->execute([$staffCode]);
++                $staticDean = $static->fetch(PDO::FETCH_ASSOC);
++                if ($staticDean && password_verify($password, (string)$staticDean['password_hash'])) {
++                    session_regenerate_id(true);
++                    $_SESSION['user'] = ['staff_code'=>'STATIC_DEAN','name'=>$staticDean['display_name'],'department'=>'Dean Office','dept_code'=>'DEAN','designation'=>'Dean','role'=>'DEAN','is_super_admin'=>false,'is_erp_staff'=>false,'is_hod'=>false];
++                    $_SESSION['qps_static_role'] = 'DEAN';
++                    $_SESSION['qps_static_username'] = $staticDean['username'];
++                    $_SESSION['qps_static_name'] = $staticDean['display_name'];
++                    $_SESSION['qps_static_must_change'] = (int)($staticDean['must_change_password'] ?? 0) === 1;
++                    $_SESSION['qps_dean_authenticated'] = true;
++                    try { qps_audit($pdo, 'LOGIN_SUCCESS_DEAN_STATIC', 'AUTH', 'STATIC_DEAN'); } catch (Throwable $e) {}
++                    header("Location: " . getBaseUrl() . "/modules/dean/dashboard.php"); exit;
++                }
+                 // Authorization registry is checked first; only explicitly enabled Deans may continue.
+                 $allow = $pdo->prepare("SELECT 1 FROM qps_dean_users WHERE UPPER(staff_code) = UPPER(?) AND is_active = 1 LIMIT 1");
+                 $allow->execute([$staffCode]);
+@@ -237,10 +252,10 @@
+                             } elseif (preg_match('/^[a-f0-9]{64}$/i', $storedPassword)) {
+                                 $valid = hash_equals(strtolower($storedPassword), hash('sha256', $password));
+                             } else {
+-                                $valid = hash_equals($storedPassword, $password) || $password === 'staff@123' || $password === 'hcc123' || $password === '12345';
++                                $valid = hash_equals($storedPassword, $password);
+                             }
+                         } else {
+-                            $valid = in_array($password, ['staff@123', 'hcc123', '12345'], true);
++                            $valid = false;
+                         }
+ 
+                         if (!$valid) {
+@@ -296,12 +311,25 @@
+         } elseif ($coePass === '') {
+             $error = 'Please enter your COE Password.';
+         } else {
++            $static = $pdo->prepare("SELECT * FROM qps_static_users WHERE LOWER(username)=LOWER(?) AND role='COE' AND is_active=1 LIMIT 1");
++            $static->execute([$coeUser]);
++            $staticCoe = $static->fetch(PDO::FETCH_ASSOC);
++            $isStaticCOE = $staticCoe && password_verify($coePass, (string)$staticCoe['password_hash']);
+             $isMasterCOE = (
+                 (strtolower($coeUser) === 'coe' || strtolower($coeUser) === 'coe_office') &&
+                 ($coePass === COE_DEFAULT_PASSWORD || $coePass === 'coe@123' || $coePass === 'hcc123')
+             );
+ 
+-            if ($isMasterCOE) {
++            if ($isStaticCOE) {
++                session_regenerate_id(true);
++                $_SESSION['user'] = ['staff_code'=>'STATIC_COE','name'=>$staticCoe['display_name'],'department'=>'COE Examination Office','dept_code'=>'COE','designation'=>'COE Office','role'=>'COE_ADMIN','is_super_admin'=>false,'is_erp_staff'=>false,'is_coe'=>true,'is_hod'=>false];
++                $_SESSION['qps_static_role'] = 'COE';
++                $_SESSION['qps_static_username'] = $staticCoe['username'];
++                $_SESSION['qps_static_name'] = $staticCoe['display_name'];
++                $_SESSION['qps_static_must_change'] = (int)($staticCoe['must_change_password'] ?? 0) === 1;
++                try { qps_audit($pdo, 'LOGIN_SUCCESS_COE_STATIC', 'AUTH', 'STATIC_COE'); } catch (Throwable $e) {}
++                header("Location: " . getBaseUrl() . "/modules/coe/dashboard.php"); exit;
++            } elseif ($isMasterCOE) {
+                 $_SESSION['user'] = [
+                     'staff_code' => 'COE_OFFICE',
+                     'name' => 'Controller of Examinations',
+@@ -324,6 +352,15 @@
+     }
+ }
+ 
++// Record failed login attempts with the request IP through the existing audit helper.
++if ($error !== '' && isset($loginType)) {
++    try { qps_audit($pdo, 'LOGIN_FAILED', 'AUTH', (string)$loginType, [
++        'login_type' => (string)$loginType,
++        'username' => (string)($_POST['staff_code'] ?? $_POST['dean_staff_code'] ?? $_POST['coe_username'] ?? ''),
++        'ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? '')
++    ]); } catch (Throwable $e) {}
++}
++
+ // Fetch Sample Quick Faculty Accounts
+ $quickFacultyList = [];
+ try {
+
+--- a/modules/coe/audit_logs.php
++++ b/modules/coe/audit_logs.php
+@@ -8,10 +8,11 @@
+ require_once __DIR__ . '/../../config/config.php';
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
++require_once __DIR__ . '/../../includes/workflow.php';
+ require_once __DIR__ . '/../../includes/system.php';
+ require_once __DIR__ . '/../../includes/pagination.php';
+ 
+-requireCOE();
++qps_workflow_require_role(['COE']);
+ $pdo = getDBConnection();
+ qps_ensure_audit_schema($pdo);
+ 
+
+--- a/modules/coe/dashboard.php
++++ b/modules/coe/dashboard.php
+@@ -9,9 +9,10 @@
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
+ require_once __DIR__ . '/../../includes/system.php';
++require_once __DIR__ . '/../../includes/workflow.php';
+ require_once __DIR__ . '/../../includes/pagination.php';
+ 
+-requireCOE();
++qps_workflow_require_role(['COE']);
+ $user = getCurrentUser();
+ $pdo = getDBConnection();
+ qps_ensure_aux_schema($pdo);
+@@ -19,7 +20,7 @@
+ // Query pending drafts for COE
+ $pendingDrafts = [];
+ try {
+-    $stPD = $pdo->query("SELECT d.*, s.FIRST_NAME as staff_name FROM qps_question_bank_drafts d LEFT JOIN pr_x_xxxx_staf_prof_mast s ON s.STAFF_CODE = d.staff_code WHERE d.status IN ('SUBMITTED_TO_COE', 'SUBMITTED_TO_HOD') ORDER BY d.id DESC");
++    $stPD = $pdo->query("SELECT d.*, s.FIRST_NAME as staff_name FROM qps_question_bank_drafts d LEFT JOIN pr_x_xxxx_staf_prof_mast s ON s.STAFF_CODE = d.staff_code WHERE d.status = 'SUBMITTED_TO_COE' ORDER BY d.id DESC");
+     $pendingDrafts = $stPD->fetchAll(PDO::FETCH_ASSOC);
+ } catch (Throwable $e) {}
+ 
+@@ -142,6 +143,12 @@
+ ?>
+ 
+ <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
++  <div class="max-w-7xl mx-auto px-4 pt-5">
++    <a href="<?= htmlspecialchars(getBaseUrl()) ?>/modules/review/index.php" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 text-white px-4 py-3 text-sm font-black shadow-sm">
++      <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review Dean-Approved Course Packages
++    </a>
++  </div>
++
+ 
+   <!-- COE Banner with Warm Crextio Styling -->
+   <div class="bg-gradient-to-r from-[#1C1D21] via-slate-900 to-amber-950 rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden border border-stone-800">
+
+--- a/modules/coe/file_manager.php
++++ b/modules/coe/file_manager.php
+@@ -6,8 +6,9 @@
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
+ require_once __DIR__ . '/../../includes/system.php';
+-
+-requireCOE();
++require_once __DIR__ . '/../../includes/workflow.php';
++
++qps_workflow_require_role(['COE']);
+ $pdo = getDBConnection();
+ qps_ensure_aux_schema($pdo);
+ $pdo->exec("CREATE TABLE IF NOT EXISTS generated_paper_remarks (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, paper_id BIGINT UNSIGNED NOT NULL, actor_staff_code VARCHAR(100) NOT NULL, actor_role VARCHAR(50) NULL, remarks TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_gpr_paper (paper_id, created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+@@ -442,9 +443,28 @@
+ $generatedPapers = [];
+ $deletedPapers = [];
+ $paperRemarks = [];
++$savedPaperSets = [];
++$setDeptFilter = trim((string)($_GET['dept'] ?? ''));
++$setCourseFilter = strtoupper(trim((string)($_GET['course'] ?? '')));
++if ($view === 'papers') {
++    try {
++        $setSql = "SELECT s.set_label,s.set_key,s.created_at,f.paper_code,f.semester,f.academic_year,f.exam_type,
++                          fb.course_title,fb.total_marks,p.dept_code
++                   FROM qps_paper_sets s
++                   JOIN qps_final_papers f ON f.id=s.final_paper_id
++                   LEFT JOIN qps_final_blueprints fb ON fb.id=f.final_blueprint_id
++                   LEFT JOIN qps_submission_packages p ON p.id=f.package_id
++                   WHERE 1=1";
++        $setParams=[];
++        if($setDeptFilter!==''){$setSql.=" AND p.dept_code=?";$setParams[]=$setDeptFilter;}
++        if($setCourseFilter!==''){$setSql.=" AND UPPER(f.paper_code) LIKE ?";$setParams[]='%'.$setCourseFilter.'%';}
++        $setSql.=" ORDER BY s.created_at DESC LIMIT 500";
++        $setSt=$pdo->prepare($setSql);$setSt->execute($setParams);$savedPaperSets=$setSt->fetchAll(PDO::FETCH_ASSOC);
++    } catch(Throwable $e) { $savedPaperSets=[]; }
++}
+ if (in_array($view, ['papers', 'papers_trash'], true)) {
+     if ($view === 'papers') {
+-        $st = $pdo->query("SELECT id, paper_code, course_title, semester, academic_year, set_name, total_marks, created_at FROM generated_papers WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500");
++        $st = $pdo->query("SELECT id, paper_code, course_title, semester, academic_year, set_name, total_marks, dept_code, created_at FROM generated_papers WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500");
+         $generatedPapers = $st->fetchAll(PDO::FETCH_ASSOC);
+         if ($generatedPapers) {
+             $ids = array_map('intval', array_column($generatedPapers, 'id'));
+@@ -720,7 +740,7 @@
+     <section class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+       <div class="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+         <div><h2 class="font-extrabold text-slate-900">Generated examination papers</h2><p class="text-xs text-slate-500 mt-1">Google Drive-style paper repository · view, edit, download and recover</p></div>
+-        <div class="flex gap-2 items-center"><input id="paperSearch" oninput="filterGeneratedPapers()" placeholder="Search papers..." class="border rounded-xl px-3 py-2 text-xs"><button type="button" onclick="setPaperLayout('grid')" class="px-3 py-2 border rounded-xl text-xs font-bold">Grid</button><button type="button" onclick="setPaperLayout('list')" class="px-3 py-2 border rounded-xl text-xs font-bold">List</button></div>
++        <div class="flex flex-wrap gap-2 items-center"><form method="get" class="flex flex-wrap gap-2"><input type="hidden" name="view" value="papers"><input name="dept" value="<?php echo htmlspecialchars($setDeptFilter); ?>" placeholder="Department code" class="border rounded-xl px-3 py-2 text-xs w-32"><input name="course" value="<?php echo htmlspecialchars($setCourseFilter); ?>" placeholder="Course code" class="border rounded-xl px-3 py-2 text-xs w-32"><button class="border rounded-xl px-3 py-2 text-xs font-bold">Filter</button></form><input id="paperSearch" oninput="filterGeneratedPapers()" placeholder="Search legacy papers..." class="border rounded-xl px-3 py-2 text-xs"><button type="button" onclick="setPaperLayout('grid')" class="px-3 py-2 border rounded-xl text-xs font-bold">Grid</button><button type="button" onclick="setPaperLayout('list')" class="px-3 py-2 border rounded-xl text-xs font-bold">List</button></div>
+       </div>
+       <?php $paperRows = ($view === 'papers') ? $generatedPapers : $deletedPapers; ?>
+       <div id="paperManagerGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
+@@ -753,6 +773,24 @@
+       <?php if (!$paperRows): ?><div class="col-span-full text-center py-16 text-sm text-slate-400">No generated papers in this view.</div><?php endif; ?>
+       </div>
+     </section>
++
++    <?php if ($view === 'papers'): ?>
++    <section class="bg-white border border-indigo-100 rounded-2xl overflow-hidden">
++      <div class="p-5 border-b border-slate-100"><h2 class="font-extrabold text-slate-900">Saved Question Paper Sets</h2><p class="text-xs text-slate-500 mt-1">Canonical questions are stored once; each card references its saved set key and ordering.</p></div>
++      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
++      <?php foreach($savedPaperSets as $set): ?>
++        <article class="border rounded-2xl p-4 hover:shadow-md transition">
++          <div class="flex items-center justify-between"><span class="rounded-full bg-indigo-50 text-indigo-700 px-3 py-1 text-xs font-black">SET <?=htmlspecialchars($set['set_label'])?></span><i data-lucide="file-check-2" class="w-5 h-5 text-indigo-500"></i></div>
++          <h3 class="font-black text-lg mt-3"><?=htmlspecialchars($set['paper_code'])?></h3>
++          <p class="text-xs text-slate-600"><?=htmlspecialchars($set['course_title']??'')?></p>
++          <p class="text-[11px] text-slate-400 mt-2"><?=htmlspecialchars($set['semester'].' · '.$set['academic_year'].' · '.($set['total_marks']??'').' marks')?></p>
++          <div class="flex flex-wrap gap-2 mt-4"><a class="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold" href="<?=htmlspecialchars(getBaseUrl())?>/modules/coe/view_paper.php?set_key=<?=rawurlencode($set['set_key'])?>">View Paper</a><a class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold" href="<?=htmlspecialchars(getBaseUrl())?>/api/export_docx.php?set_key=<?=rawurlencode($set['set_key'])?>">Download DOCX</a></div>
++        </article>
++      <?php endforeach; ?>
++      <?php if(!$savedPaperSets): ?><div class="col-span-full text-center py-10 text-sm text-slate-400">No saved set-key papers match these filters.</div><?php endif; ?>
++      </div>
++    </section>
++    <?php endif; ?>
+ 
+   <?php else: ?>
+ 
+
+--- a/modules/coe/final_allotment.php
++++ b/modules/coe/final_allotment.php
+@@ -3,7 +3,10 @@
+ require_once __DIR__ . '/../../config/config.php';
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
+-requireCOE();
++require_once __DIR__ . '/../../includes/workflow.php';
++qps_workflow_require_role(['COE']);
++if (empty($_SESSION['qps_review_csrf'])) $_SESSION['qps_review_csrf'] = bin2hex(random_bytes(32));
++$reviewCsrf = (string)$_SESSION['qps_review_csrf'];
+ require_once __DIR__ . '/../../includes/header.php';
+ require_once __DIR__ . '/../../includes/navbar.php';
+ require_once __DIR__ . '/../../includes/sidebar.php';
+@@ -119,6 +122,9 @@
+                         </div>
+                         <span id="eligibleCount" class="text-xs text-slate-500"></span>
+                     </div>
++                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600 mb-2">
++                        <input id="hideUsed" type="checkbox" class="rounded border-slate-300"> Hide last year used
++                    </label>
+                     <input id="search" type="search" placeholder="Search question text, unit, subunit, K-level…"
+                         class="w-full rounded-xl border-slate-300 bg-slate-50 p-3 text-sm mb-3" disabled>
+                     <div id="pool" class="space-y-3 max-h-[72vh] overflow-y-auto pr-1">
+@@ -296,8 +302,7 @@
+         (!slot.question_type || String(question.question_type).toUpperCase() === String(slot.question_type).toUpperCase()) &&
+         (!slot.marks || Number(question.marks) === Number(slot.marks)) &&
+         (!slot.k_level || String(question.k_level).toUpperCase() === String(slot.k_level).toUpperCase()) &&
+-        (!slot.co_level || String(question.co_level).toUpperCase() === String(slot.co_level).toUpperCase()) &&
+-        !Number(question.previously_used || 0);
++        (!slot.co_level || String(question.co_level).toUpperCase() === String(slot.co_level).toUpperCase());
+ }
+ function renderPool() {
+     const slot = slots.find(item => item.slot_key === activeSlot);
+@@ -308,14 +313,16 @@
+         return;
+     }
+     const current = String(assignments[slot.slot_key] || '');
++    const hideUsed = Boolean($('hideUsed') && $('hideUsed').checked);
+     const list = questions.filter(question => compatible(question,slot) &&
++        (!hideUsed || !Number(question.previously_used || 0)) &&
+         (!term || String(question.question_text||'').toLowerCase().includes(term) ||
+         String(question.unit_no).includes(term) || String(question.sub_unit||'').toLowerCase().includes(term) ||
+         String(question.k_level||'').toLowerCase().includes(term)))
+         .filter(question => !Object.entries(assignments).some(([key,value]) => String(value) === String(question.id) && key !== slot.slot_key));
+     $('eligibleCount').textContent = `${list.length} eligible questions`;
+-    $('pool').innerHTML = list.length ? list.map(question => `<article class="border ${String(question.id)===current?'border-emerald-400 bg-emerald-50':'border-slate-200'} rounded-xl p-4">
+-        <div class="flex flex-wrap justify-between gap-2"><span class="text-[11px] font-black text-slate-500">BANK Q${esc(question.fixed_q_no||question.q_number)} · Unit ${esc(question.unit_no)}${question.sub_unit?'.'+esc(question.sub_unit):''} · ${esc(question.marks)} mark(s)</span><span class="text-[10px] font-bold text-indigo-600">${esc(question.k_level||'')}</span></div>
++    $('pool').innerHTML = list.length ? list.map(question => `<article class="border ${String(question.id)===current?'border-emerald-400 bg-emerald-50':'border-slate-200'} ${Number(question.previously_used||0)?'opacity-60 hover:opacity-100':''} rounded-xl p-4">
++        <div class="flex flex-wrap justify-between gap-2"><span class="text-[11px] font-black text-slate-500">BANK Q${esc(question.fixed_q_no||question.q_number)} · Unit ${esc(question.unit_no)}${question.sub_unit?'.'+esc(question.sub_unit):''} · ${esc(question.marks)} mark(s)</span><span class="text-[10px] font-bold text-indigo-600">${esc(question.k_level||'')}</span>${Number(question.previously_used||0)?'<span class="text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-1 rounded-full">Used last year'+(question.previous_usage_message?' · '+esc(question.previous_usage_message):'')+'</span>':''}</div>
+         <p class="qp-question-body text-sm text-slate-800 mt-3 leading-relaxed">${esc(question.question_text)}</p>${renderQuestionExtras(question)}
+         <div class="flex flex-wrap justify-between items-center gap-2 mt-3"><span class="text-[10px] text-slate-500">${esc(question.question_type||'')} ${question.co_level?'· '+esc(question.co_level):''}</span>
+         <button type="button" data-pick="${esc(question.id)}" class="text-xs font-black px-4 py-2 rounded-lg ${String(question.id)===current?'bg-emerald-600':'bg-orange-600'} text-white">${String(question.id)===current?'Assigned':'Assign to Q'+esc(slot.slot_number)}</button></div></article>`).join('') :
+@@ -381,13 +388,14 @@
+     }
+ });
+ $('search').addEventListener('input', renderPool);
++$('hideUsed')?.addEventListener('change', renderPool);
+ $('saveBtn').addEventListener('click', async () => {
+     if (!blueprint) return notify('Select a blueprint first.', false);
+     $('saveBtn').disabled = true;
+     try {
+         const result = await req(api + '?action=save&blueprint_id=' + encodeURIComponent(blueprint.id), {
+             method:'POST', headers:{'Content-Type':'application/json'},
+-            body:JSON.stringify({assignments})
++            body:JSON.stringify({assignments,csrf:<?=json_encode($reviewCsrf)?>})
+         });
+         notify(`${result.message} Assigned: ${result.assigned_count}`);
+     } catch (error) {
+
+--- a/modules/coe/shuffle.php
++++ b/modules/coe/shuffle.php
+@@ -9,11 +9,21 @@
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
+ require_once __DIR__ . '/../../includes/system.php';
++require_once __DIR__ . '/../../includes/workflow.php';
+ require_once __DIR__ . '/../../includes/pagination.php';
+ 
+-requireCOE();
++qps_workflow_require_role(['COE']);
+ $pdo = getDBConnection();
+ $user = getCurrentUser() ?: ['staff_code' => 'COE_OFFICE', 'role' => 'COE_ADMIN'];
++if (empty($_SESSION['qps_review_csrf'])) $_SESSION['qps_review_csrf'] = bin2hex(random_bytes(32));
++$workflowCsrf = (string)$_SESSION['qps_review_csrf'];
++$workflowBlueprints = [];
++try {
++    $stWorkflow = $pdo->query("SELECT id,paper_code,course_title,semester,academic_year,exam_type,total_marks
++      FROM qps_final_blueprints WHERE UPPER(status)='ACTIVE' AND slots_config IS NOT NULL ORDER BY paper_code,academic_year DESC");
++    $workflowBlueprints = $stWorkflow->fetchAll(PDO::FETCH_ASSOC);
++} catch (Throwable $e) {}
++
+ 
+ $selectedBankId = isset($_GET['bank_id']) ? intval($_GET['bank_id']) : 0;
+ $selectedBlueprintId = isset($_GET['blueprint_id']) ? intval($_GET['blueprint_id']) : 0;
+@@ -93,6 +103,24 @@
+ ?>
+ 
+ <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
++    <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
++      <div class="rounded-3xl border border-indigo-100 bg-white shadow-sm p-5 md:p-7 space-y-5">
++        <div><p class="text-xs font-black uppercase tracking-widest text-indigo-600">COE • Three-step generation</p><h2 class="text-2xl font-black text-slate-900">Generate Question Paper Sets</h2><p class="text-sm text-slate-500 mt-1">Generate from the saved final allotment. Questions are stored once; each set stores only its ordering and option permutation.</p></div>
++        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
++          <label class="rounded-2xl border p-4"><span class="text-xs font-black text-slate-500">STEP 1 · SELECT COURSE</span><select id="workflowBlueprint" class="mt-2 w-full rounded-xl border-slate-300 text-sm"><option value="">Choose an active final blueprint</option><?php foreach($workflowBlueprints as $wb):?><option value="<?= (int)$wb['id']?>"><?=htmlspecialchars($wb['paper_code'].' — '.$wb['course_title'].' ('.$wb['semester'].' / '.$wb['academic_year'].')')?></option><?php endforeach;?></select></label>
++          <label class="rounded-2xl border p-4"><span class="text-xs font-black text-slate-500">STEP 2 · NUMBER OF SETS</span><select id="workflowSetCount" class="mt-2 w-full rounded-xl border-slate-300 text-sm"><option value="1">Single set (default)</option><option value="2">Set A and Set B</option><option value="3">Set A, Set B and Set C</option></select></label>
++          <div class="rounded-2xl border p-4 flex flex-col justify-between"><span class="text-xs font-black text-slate-500">STEP 3 · GENERATE</span><button id="workflowGenerate" type="button" class="mt-2 rounded-xl bg-indigo-600 text-white px-4 py-3 font-black text-sm disabled:opacity-50">Generate & Save Papers</button></div>
++        </div>
++        <div id="workflowFeedback" class="text-sm" role="status"></div>
++        <div id="workflowSetLinks" class="flex flex-wrap gap-2"></div>
++      </div>
++    </section>
++    <script>
++    (()=>{const btn=document.getElementById('workflowGenerate');if(!btn)return;btn.addEventListener('click',async()=>{const id=document.getElementById('workflowBlueprint').value;const count=Number(document.getElementById('workflowSetCount').value);const feedback=document.getElementById('workflowFeedback');const links=document.getElementById('workflowSetLinks');if(!id){feedback.textContent='Select a course first.';feedback.className='text-sm text-rose-700';return;}btn.disabled=true;btn.textContent='Generating…';links.innerHTML='';try{const r=await fetch('<?=htmlspecialchars(getBaseUrl())?>/api/coe_paper_sets.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:<?=json_encode($workflowCsrf)?>,final_blueprint_id:Number(id),set_count:count})});const d=await r.json();if(!d.success)throw new Error(d.message||'Generation failed.');feedback.textContent=d.message;feedback.className='text-sm text-emerald-700 font-bold';for(const set of d.sets){const a=document.createElement('a');a.href='view_paper.php?set_key='+encodeURIComponent(set.set_key);a.textContent='View Set '+set.set_label;a.className='rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700';links.appendChild(a);}}catch(e){feedback.textContent=e.message;feedback.className='text-sm text-rose-700';}finally{btn.disabled=false;btn.textContent='Generate & Save Papers';}});})();
++    </script>
++
++    <div class="hidden" aria-hidden="true" id="legacyRandomShuffleUi">
++
+ 
+   <!-- Header Banner with Warm Crextio Ambient Styling -->
+   <div class="bg-gradient-to-r from-[#1C1D21] via-slate-900 to-indigo-950 rounded-[28px] p-7 text-white shadow-xl border border-stone-800 relative overflow-hidden">
+@@ -269,6 +297,7 @@
+     </div>
+   <?php endif; ?>
+ 
++</div>
+ </main>
+ 
+ <!-- Swap Candidates Modal with Crextio Soft Corners & Backdrop Blur -->
+@@ -325,6 +354,7 @@
+     opt.textContent = 'No question banks found for selected department';
+     select.appendChild(opt);
+   }
++}
+ function confirmPaperDelete(event, form) {
+   event.preventDefault();
+   if (typeof Swal !== 'undefined') {
+
+--- a/modules/coe/view_paper.php
++++ b/modules/coe/view_paper.php
+@@ -13,11 +13,14 @@
+ require_once __DIR__ . '/../../config/config.php';
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
++require_once __DIR__ . '/../../includes/workflow.php';
+ require_once __DIR__ . '/../../includes/system.php';
++require_once __DIR__ . '/../../includes/paper_rebuild.php';
+ 
+ requireAuth();
+ $pdo = getDBConnection();
+ 
++$activeSetKey = trim((string)($_GET['set_key'] ?? ''));
+ $paperId = isset($_GET['paper_id']) ? intval($_GET['paper_id']) : (isset($_GET['id']) ? intval($_GET['id']) : 0);
+ $selectedCourse = strtoupper(trim((string)($_GET['course'] ?? '')));
+ 
+@@ -77,6 +80,44 @@
+ $paperData = [];
+ if ($paper && !empty($paper['paper_data_json'])) {
+     $paperData = json_decode($paper['paper_data_json'], true) ?: [];
++}
++
++// New canonical set-key view. Legacy generated_papers continue through the original path above.
++if ($activeSetKey !== '') {
++    $rebuilt = qps_rebuild_paper($pdo, $activeSetKey);
++    $grouped = [];
++    foreach ($rebuilt['questions'] as $q) {
++        $section = (string)($q['section_type'] ?? 'SECTION-A');
++        $questionText = (string)($q['question_text'] ?? '');
++        if (!empty($q['options']) && is_array($q['options'])) {
++            foreach (array_values($q['options']) as $i=>$option) $questionText .= "\n" . chr(65+$i) . ') ' . (string)$option;
++        }
++        $grouped[$section][] = [
++            'display_qno'=>$q['print_number']??$q['q_number']??'',
++            'q_number'=>$q['print_number']??$q['q_number']??'',
++            'question_text'=>$questionText,
++            'k_level'=>$q['k_level']??'',
++            'co_level'=>$q['co_level']??'',
++            'marks'=>$q['marks']??0,
++            'image_url'=>$q['image_url']??''
++        ];
++    }
++    $sections=[];
++    $paperSectionConfigs=$rebuilt['paper_type']['sections']??[];
++    foreach($grouped as $section=>$questionsForSection){
++        $code=preg_replace('/^SECTION[-_]?/i','',$section);$cfg=null;
++        foreach($paperSectionConfigs as $candidate){if(strtoupper((string)($candidate['code']??''))===strtoupper($code)){$cfg=$candidate;break;}}
++        $sections[]=['section_name'=>$cfg['title']??str_replace(['SECTION-','_'],['Section ',' '],$section),
++            'choice_formula'=>$cfg['choice_formula']??'','instruction'=>$cfg['instruction']??'',
++            'total_marks'=>array_sum(array_map(static fn($q)=>(int)($q['marks']??0),$questionsForSection)),'questions'=>$questionsForSection];
++    }
++    $paper=[
++      'paper_code'=>$rebuilt['paper_code'],'course_title'=>$rebuilt['course_title'],'semester'=>$rebuilt['semester'],
++      'academic_year'=>$rebuilt['academic_year'],'exam_type'=>$rebuilt['exam_type'],'total_marks'=>$rebuilt['total_marks'],
++      'duration_hours'=>'3 HOURS','dept_code'=>'','dept_name'=>'','exam_date'=>''
++    ];
++    $paperData=['sections'=>$sections,'paper_code'=>$rebuilt['paper_code'],'set_name'=>$rebuilt['set_name'],
++      'institution'=>$rebuilt['header']['institution']??null,'header_lines'=>$rebuilt['header']['lines']??[]];
+ }
+ 
+ // Compute dynamic header fields
+@@ -150,7 +191,7 @@
+       <!-- Quick Action Buttons -->
+       <div class="flex items-center gap-2">
+         <?php if ($paper): ?>
+-          <a href="<?php echo getBaseUrl(); ?>/api/export_docx.php?paper_id=<?php echo $paper['id']; ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow flex items-center space-x-1.5 transition">
++          <a href="<?php echo getBaseUrl(); ?>/api/export_docx.php?<?php echo $activeSetKey !== '' ? 'set_key=' . rawurlencode($activeSetKey) : 'paper_id=' . (int)$paper['id']; ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow flex items-center space-x-1.5 transition">
+             <i data-lucide="file-down" class="w-4 h-4 text-amber-300"></i>
+             <span>Export DOCX</span>
+           </a>
+@@ -268,10 +309,16 @@
+ 
+       <!-- Official College Examination Header -->
+       <div class="text-center space-y-1">
+-        <h1 class="text-base sm:text-lg font-bold tracking-wide uppercase font-serif"><?php echo htmlspecialchars($collegeName); ?></h1>
+-        <h2 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($schoolName); ?></h2>
+-        <h3 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($degreeExamLine); ?></h3>
+-        <h4 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($coursePartLine); ?></h4>
++        <?php if (!empty($paperData['header_lines']) && is_array($paperData['header_lines'])): ?>
++          <?php foreach ($paperData['header_lines'] as $headerLine): ?>
++            <h1 class="text-base sm:text-lg font-bold tracking-wide uppercase font-serif"><?=htmlspecialchars((string)($headerLine['line_text']??''))?></h1>
++          <?php endforeach; ?>
++        <?php else: ?>
++          <h1 class="text-base sm:text-lg font-bold tracking-wide uppercase font-serif"><?php echo htmlspecialchars($collegeName); ?></h1>
++          <h2 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($schoolName); ?></h2>
++          <h3 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($degreeExamLine); ?></h3>
++          <h4 class="text-xs sm:text-sm font-bold uppercase"><?php echo htmlspecialchars($coursePartLine); ?></h4>
++        <?php endif; ?>
+         
+         <div class="flex items-center justify-between pt-2">
+           <div class="text-left font-bold text-xs uppercase font-serif"><?php echo htmlspecialchars($courseTitle); ?></div>
+
+--- a/modules/dean/actions.php
++++ b/modules/dean/actions.php
+@@ -4,6 +4,7 @@
+ require_once __DIR__ . '/../../config/db.php';
+ require_once __DIR__ . '/../../includes/auth.php';
+ require_once __DIR__ . '/../../includes/system.php';
++require_once __DIR__ . '/../../includes/workflow.php';
+ requireDean();
+ if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit('POST required.'); }
+ $token = (string)($_POST['csrf_token'] ?? '');
+@@ -13,6 +14,26 @@
+ $draftId = filter_input(INPUT_POST, 'draft_id', FILTER_VALIDATE_INT);
+ $action = (string)($_POST['action'] ?? '');
+ if (!$draftId) { http_response_code(400); exit('Invalid draft ID.'); }
++$pkgStmt=$pdo->prepare("SELECT * FROM qps_submission_packages WHERE bank_draft_id=? ORDER BY id DESC LIMIT 1");
++$pkgStmt->execute([$draftId]);$workflowPackage=$pkgStmt->fetch(PDO::FETCH_ASSOC);
++if($action==='submit_coe'){
++    if(!$workflowPackage) { http_response_code(409); exit('This course has not been submitted through the centralized Staff → HOD → Dean workflow.'); }
++    try {
++        $stDraftCheck=$pdo->prepare('SELECT * FROM qps_question_bank_drafts WHERE id=?');$stDraftCheck->execute([$draftId]);$draftCheck=$stDraftCheck->fetch(PDO::FETCH_ASSOC);
++        $stBlueprintCheck=$pdo->prepare('SELECT * FROM qps_final_blueprints WHERE id=?');$stBlueprintCheck->execute([(int)$workflowPackage['final_blueprint_id']]);$blueprintCheck=$stBlueprintCheck->fetch(PDO::FETCH_ASSOC);
++        if(!$draftCheck||!$blueprintCheck)throw new RuntimeException('Question bank or final blueprint is missing.');
++        $slotData=json_decode((string)$blueprintCheck['slots_config'],true);if(isset($slotData['slots']))$slotData=$slotData['slots'];
++        $validationContext=$draftCheck;$validationContext['total_marks']=(int)($blueprintCheck['total_marks']??0);
++        $validation=qps_validate_slots($pdo,$validationContext,is_array($slotData)?$slotData:[],'submit');
++        if($validation['errors'])throw new RuntimeException('Dean validation failed: '.implode("\n",$validation['errors']));
++        $result=qps_transition($pdo,(int)$workflowPackage['id'],'DEAN_APPROVE','Dean approved all three artifacts and sent the course to COE.');
++        $pdo->prepare("UPDATE qps_question_bank_drafts SET status='SUBMITTED_TO_COE',review_comments=CONCAT(COALESCE(review_comments,''),?) WHERE id=?")
++            ->execute(["\nDean approved at ".date('Y-m-d H:i:s'),$draftId]);
++        $pdo->prepare("INSERT INTO qps_dean_review_actions (draft_id,question_id,staff_code,action_type,remark_text,question_version,created_at) VALUES (?,NULL,?,'SUBMITTED_TO_COE',NULL,NULL,NOW())")
++            ->execute([$draftId,(string)($user['staff_code']??'DEAN')]);
++        header('Location: dashboard.php?msg='.rawurlencode('Course approved and sent to COE.'));exit;
++    } catch(Throwable $e){http_response_code(400);exit(htmlspecialchars($e->getMessage()));}
++}
+ try {
+     $pdo->beginTransaction();
+     $st = $pdo->prepare("SELECT id, status, paper_code FROM qps_question_bank_drafts WHERE id = ? FOR UPDATE");
+@@ -32,6 +53,9 @@
+         $up->execute([$remark, $questionId, $draftId]);
+         $log = $pdo->prepare("INSERT INTO qps_dean_review_actions (draft_id, question_id, staff_code, action_type, remark_text, question_version, created_at) VALUES (?, ?, ?, 'REMARK_SENT', ?, ?, NOW())");
+         $log->execute([$draftId, $questionId, $staffCode, $remark, (int)$question['version_no']]);
++        if(!$workflowPackage) throw new RuntimeException('Workflow package not found for this Dean submission.');
++        $pdo->prepare("INSERT INTO qps_remarks(package_id,target_type,target_ref,round_no,author_code,author_name,author_role,to_role,remark_text) VALUES(?,'QUESTION',?,?,?,?,'DEAN','HOD',?)")
++            ->execute([(int)$workflowPackage['id'],(string)$questionId,(int)$workflowPackage['round_no'],$staffCode,(string)($user['name']??$staffCode),$remark]);
+ 
+     } elseif ($action === 'verify_corrected') {
+         $questionId = filter_input(INPUT_POST, 'question_id', FILTER_VALIDATE_INT);
+@@ -47,23 +71,14 @@
+         $log = $pdo->prepare("INSERT INTO qps_dean_review_actions (draft_id, question_id, staff_code, action_type, remark_text, question_version, created_at) VALUES (?, ?, ?, 'CORRECTION_VERIFIED', NULL, ?, NOW())");
+         $log->execute([$draftId, $questionId, $staffCode, (int)$question['version_no']]);
+ 
+-    } elseif ($action === 'submit_coe') {
+-        $check = $pdo->prepare("SELECT COUNT(*) FROM qps_question_bank_draft_questions WHERE draft_id = ? AND correction_status <> 'CLEAN'");
+-        $check->execute([$draftId]);
+-        $pending = (int)$check->fetchColumn();
+-        $total = $pdo->prepare('SELECT COUNT(*) FROM qps_question_bank_draft_questions WHERE draft_id = ?');
+-        $total->execute([$draftId]);
+-        if ($pending > 0) throw new RuntimeException('Resolve all correction remarks before submitting to COE.');
+-        if ((int)$total->fetchColumn() < 1) throw new RuntimeException('Cannot submit an empty question bank.');
+-        $up = $pdo->prepare("UPDATE qps_question_bank_drafts SET status = 'SUBMITTED_TO_COE', review_comments = CONCAT(COALESCE(review_comments, ''), ?) WHERE id = ? AND status = 'SUBMITTED_TO_DEAN'");
+-        $up->execute(["\nDean approved by {$staffCode} at " . date('Y-m-d H:i:s'), $draftId]);
+-        if ($up->rowCount() !== 1) throw new RuntimeException('Submission status changed. Refresh and retry.');
+-        $log = $pdo->prepare("INSERT INTO qps_dean_review_actions (draft_id, question_id, staff_code, action_type, remark_text, question_version, created_at) VALUES (?, NULL, ?, 'SUBMITTED_TO_COE', NULL, NULL, NOW())");
+-        $log->execute([$draftId, $staffCode]);
+     } else {
+         throw new RuntimeException('Unknown Dean action.');
+     }
+     $pdo->commit();
++    if($action==='remark' && $workflowPackage){
++        qps_transition($pdo,(int)$workflowPackage['id'],'DEAN_RETURN','Dean returned a question-level remark to HOD.');
++        $pdo->prepare("UPDATE qps_question_bank_drafts SET status='DEAN_REMARKS',updated_at=NOW() WHERE id=?")->execute([$draftId]);
++    }
+     header('Location: review.php?draft_id=' . $draftId . '&msg=' . rawurlencode('Action completed successfully.'));
+     exit;
+ } catch (Throwable $e) {
+
+--- a/modules/dean/dashboard.php
++++ b/modules/dean/dashboard.php
+@@ -45,6 +45,11 @@
+ require_once __DIR__ . '/../../includes/sidebar.php';
+ ?>
+ <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
++  <div class="max-w-7xl mx-auto px-4 pt-5 flex flex-wrap gap-2">
++    <a href="<?= htmlspecialchars(getBaseUrl()) ?>/modules/dean/question_rules.php" class="rounded-xl bg-purple-600 text-white px-4 py-3 text-sm font-black">Manage K-Level / CO-Level Rules</a>
++    <a href="<?= htmlspecialchars(getBaseUrl()) ?>/modules/review/index.php" class="rounded-xl bg-indigo-600 text-white px-4 py-3 text-sm font-black">Open HOD Submitted Courses</a>
++  </div>
++
+   <section class="rounded-3xl bg-slate-950 text-white p-6 md:p-8 shadow-xl">
+     <div class="text-xs uppercase tracking-[.2em] font-black text-purple-300">Dean Portal</div>
+     <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-2">
+
+--- a/modules/teaching/dashboard.php
++++ b/modules/teaching/dashboard.php
+@@ -11,6 +11,7 @@
+ require_once __DIR__ . '/../../includes/system.php';
+ 
+ requireAuth();
++if (empty($_SESSION['qps_static_role']) && empty($_SESSION['qps_dean_authenticated'])) $_SESSION['qps_portal_role'] = 'STAFF';
+ $user = getCurrentUser();
+ $pdo = getDBConnection();
+ 
+@@ -94,7 +95,7 @@
+       <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-600"></i>
+       <span>Course Blueprint</span>
+     </a>
+-    <a href="<?php echo getBaseUrl(); ?>/modules/teaching/view_banks.php" class="px-4 py-2 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs shadow-sm shrink-0 flex items-center space-x-1.5 transition">
++    <a href="<?php echo getBaseUrl(); ?>/modules/teaching/corrections.php" class="px-4 py-2 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs shadow-sm shrink-0 flex items-center space-x-1.5 transition">
+       <i data-lucide="archive" class="w-3.5 h-3.5 text-emerald-600"></i>
+       <span>My Question Banks</span>
+     </a>
+
+--- a/modules/teaching/upload.php
++++ b/modules/teaching/upload.php
+@@ -13,6 +13,9 @@
+ require_once __DIR__ . '/../../includes/question_bank_blueprint.php';
+ 
+ requireAuth();
++if (empty($_SESSION['qps_review_csrf'])) $_SESSION['qps_review_csrf'] = bin2hex(random_bytes(32));
++if (isLoggedIn() && empty($_SESSION['qps_static_role']) && empty($_SESSION['qps_dean_authenticated'])) $_SESSION['qps_portal_role'] = 'STAFF';
++
+ $pdo = getDBConnection();
+ $user = getCurrentUser();
+ qps_ensure_aux_schema($pdo);
+@@ -190,7 +193,7 @@
+       <a href="<?php echo getBaseUrl(); ?>/modules/teaching/question_bank_blueprint.php" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
+         <i data-lucide="layout-grid" class="w-4 h-4 text-slate-600"></i> Blueprint Master
+       </a>
+-      <a href="<?php echo getBaseUrl(); ?>/modules/teaching/view_banks.php" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all">
++      <a href="<?php echo getBaseUrl(); ?>/modules/teaching/corrections.php" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all">
+         <i data-lucide="eye" class="w-4 h-4"></i> View All Banks
+       </a>
+     </div>
+@@ -732,6 +735,7 @@
+ // State Management
+ let currentCourseCode = '<?php echo htmlspecialchars($selectedCourseCode); ?>';
+ let currentDraft = null;
++let currentFinalBlueprintId = 0;
+ let currentQuestions = [];
+ let currentMatrix = [];
+ let coeApprovedQuestions = [];
+@@ -877,7 +881,7 @@
+     }
+     // Q30: Compulsory Essay (10M = 10M)
+     slots.push({ slot_number: 30, section_type: 'SECTION-D', unit_no: 5, sub_unit: '5.1', question_type: 'ESSAY', k_level: 'K6', co_level: 'CO5', marks: 10, is_compulsory: 1, assigned_fixed_q_no: null });
+-    return slots;
++    return slots.map(slot => ({ ...slot, k_level: '', co_level: '' }));
+   } else {
+     // NON-OBE Pattern: 16 Slots (50 Marks)
+     const slots = [];
+@@ -898,7 +902,7 @@
+       const u = i - 14;
+       slots.push({ slot_number: i, section_type: 'SECTION-C', unit_no: u, sub_unit: `${u}.1`, question_type: 'ESSAY', k_level: 'K5', co_level: `CO${u}`, marks: 10, is_compulsory: 0, assigned_fixed_q_no: null });
+     }
+-    return slots;
++    return slots.map(slot => ({ ...slot, k_level: '', co_level: '' }));
+   }
+ }
+ 
+@@ -919,7 +923,7 @@
+   bar.innerHTML = currentSlotsData.map(slot => {
+     const n = Number(slot.slot_number);
+     const active = n === Number(activeSlotNumber);
+-    return `<button type="button" onclick="selectBlueprintSlot(${n})" aria-pressed="${active}" title="Q${n} · ${escapeHtml(slot.section_type)} · ${Number(slot.marks || 1)} mark(s)" class="w-10 h-10 rounded-full border-2 font-black text-xs inline-flex items-center justify-center transition ${sectionColors[slot.section_type] || 'bg-slate-500 text-white border-slate-400'} ${active ? 'ring-4 ring-orange-300 scale-110 shadow-lg' : 'opacity-85 hover:opacity-100 hover:scale-105'}">${n}</button>`;
++    return `<button type="button" onclick="selectBlueprintSlot(${n})" aria-pressed="${active}" title="Q${n} · ${escapeHtml(slot.section_type)} · ${Number(slot.marks || 1)} mark(s)${slot.remark_text?' · REMARK: '+escapeHtml(slot.remark_text):''}" class="w-10 h-10 rounded-full border-2 font-black text-xs inline-flex items-center justify-center transition ${slot.remark_text?'bg-rose-100 border-rose-500 text-rose-800':(sectionColors[slot.section_type] || 'bg-slate-500 text-white border-slate-400')} ${active ? 'ring-4 ring-orange-300 scale-110 shadow-lg' : 'opacity-85 hover:opacity-100 hover:scale-105'}">${n}</button>`;
+   }).join('');
+ }
+ 
+@@ -937,7 +941,6 @@
+ 
+   const u = parseInt(newUnit, 10) || 1;
+   slot.unit_no = u;
+-  slot.co_level = `CO${Math.min(5, u)}`;
+ 
+   const pool = getEnteredUnitsAndSubunits();
+   const availableSubunits = pool.subunitsByUnit[u] || [`${u}.1`];
+@@ -1025,7 +1028,7 @@
+   const subOptions = subunits.map(sub => `<option value="${escapeHtml(sub)}" ${String(slot.sub_unit)===String(sub)?'selected':''}>Sub-unit ${escapeHtml(sub)} (${currentQuestions.filter(q=>Number(q.unit_no)===chosenUnit && String(q.sub_unit).trim()===String(sub)).length} Qs)</option>`).join('');
+   const matched = currentQuestions.filter(q=>Number(q.unit_no)===chosenUnit && String(q.sub_unit).trim()===String(slot.sub_unit).trim() && Number(q.marks)===Number(slot.marks)).length;
+   const sectionStyles = {'SECTION-A':'border-indigo-200 bg-indigo-50 text-indigo-800','SECTION-B':'border-amber-200 bg-amber-50 text-amber-800','SECTION-C':'border-emerald-200 bg-emerald-50 text-emerald-800','SECTION-D':'border-rose-200 bg-rose-50 text-rose-800'};
+-  const secStyle = sectionStyles[slot.section_type] || 'border-slate-200 bg-slate-50 text-slate-800';
++  const secStyle = slot.remark_text ? 'border-rose-300 bg-rose-50 text-rose-800' : (sectionStyles[slot.section_type] || 'border-slate-200 bg-slate-50 text-slate-800');
+ 
+   container.innerHTML = `
+     <div class="grid grid-cols-1 lg:grid-cols-[minmax(210px,.65fr)_minmax(0,1.7fr)] gap-4 items-start">
+@@ -1047,10 +1050,12 @@
+           <label class="text-xs font-bold text-slate-600 sm:col-span-2">Question Type<select onchange="updateSlotField(${Number(slot.slot_number)},'question_type',this.value)" class="mt-1 w-full rounded-xl border-slate-300 bg-slate-50 p-3 text-sm">
+             ${[['MCQ','Multiple Choice (MCQ)'],['FILL_BLANKS','Fill in the Blanks'],['TRUE_FALSE','True / False'],['MATCH','Match the Following'],['ASSERTION_REASON','Assertion & Reason'],['VSA','Very Short Answer (VSA)'],['PARAGRAPH','Paragraph Answer (5M)'],['ESSAY','Descriptive Essay (10M)'],['CASE_STUDY','Compulsory Case/Essay (10M)']].map(([v,l])=>`<option value="${v}" ${slot.question_type===v?'selected':''}>${l}</option>`).join('')}
+           </select></label>
+-          <label class="text-xs font-bold text-slate-600">K-Level<select onchange="updateSlotField(${Number(slot.slot_number)},'k_level',this.value)" class="mt-1 w-full rounded-xl border-slate-300 bg-slate-50 p-3 text-sm">${['K1','K2','K3','K4','K5','K6'].map(v=>`<option ${slot.k_level===v?'selected':''}>${v}</option>`).join('')}</select></label>
+-          <label class="text-xs font-bold text-slate-600">CO-Level<select onchange="updateSlotField(${Number(slot.slot_number)},'co_level',this.value)" class="mt-1 w-full rounded-xl border-slate-300 bg-slate-50 p-3 text-sm">${['CO1','CO2','CO3','CO4','CO5'].map(v=>`<option ${slot.co_level===v?'selected':''}>${v}</option>`).join('')}</select></label>
++          <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3"><div class="text-[10px] font-black uppercase text-indigo-500">K-Level · Dean rule</div><div class="font-black text-indigo-900">${escapeHtml(slot.k_level || 'Resolving…')}</div></div>
++          <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3"><div class="text-[10px] font-black uppercase text-indigo-500">CO-Level · Dean rule</div><div class="font-black text-indigo-900">${escapeHtml(slot.co_level || 'Resolving…')}</div></div>
+           <label class="text-xs font-bold text-slate-600">Marks<select onchange="updateSlotField(${Number(slot.slot_number)},'marks',this.value)" class="mt-1 w-full rounded-xl border-slate-300 bg-slate-50 p-3 text-sm">${[1,5,10].map(v=>`<option value="${v}" ${Number(slot.marks)===v?'selected':''}>${v} mark(s)</option>`).join('')}</select></label>
+         </div>
++        ${slotRuleError ? `<div class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">${escapeHtml(slotRuleError)}</div>` : ''}
++        ${slot.remark_text ? `<div class="mt-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs font-bold text-rose-800"><i data-lucide="message-square-warning" class="inline w-4 h-4 mr-1"></i> Reviewer remark: ${escapeHtml(slot.remark_text)}</div>` : ''}
+         <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">${matched>0?`<strong class="text-emerald-700">${matched} matching question(s)</strong> currently exist in this unit, sub-unit and marks combination.`:'No exact matching questions are currently in the draft pool.'}</div>
+       </section>
+     </div>`;
+@@ -1060,11 +1065,18 @@
+ // Save Master Blueprint & Final Blueprint Slots
+ async function saveFinalBlueprintSlots() {
+   if (!currentSlotsData.length) return;
++  if (slotRuleError || currentSlotsData.some(s => !s.k_level || !s.co_level)) {
++    return Swal.fire({icon:'error',title:'Dean rules required',text:slotRuleError || 'K-Level and CO-Level rules must be resolved before saving.'});
++  }
+ 
+   const payload = {
+     action: 'save_slots',
++    csrf: <?=json_encode($_SESSION['qps_review_csrf'])?>,
+     paper_code: currentCourseCode,
+-    course_type: 'OBE',
++    semester: currentDraft?.semester || '',
++    academic_year: currentDraft?.academic_year || '',
++    programme_level: currentDraft?.degree_level || currentDraft?.programme_level || '',
++    course_type: currentDraft?.course_type || currentDraft?.papertype || '',
+     slots: currentSlotsData
+   };
+ 
+@@ -1248,6 +1260,46 @@
+ }
+ 
+ // Fetch Course Data & Blueprint
++let slotRuleError = '';
++async function resolveSlotRules() {
++  if (!currentDraft || !Array.isArray(currentSlotsData) || !currentSlotsData.length) return;
++  const course = {
++    paper_code: currentCourseCode,
++    semester: currentDraft.semester || '',
++    academic_year: currentDraft.academic_year || '',
++    programme_level: currentDraft.degree_level || currentDraft.programme_level || '',
++    course_type: currentDraft.course_type || currentDraft.papertype || ''
++  };
++  try {
++    const response = await fetch('<?php echo getBaseUrl(); ?>/api/question_rules.php', {
++      method:'POST', headers:{'Content-Type':'application/json'},
++      body:JSON.stringify({action:'resolve',csrf:<?=json_encode($_SESSION['qps_review_csrf'])?>,course})
++    });
++    const result = await response.json();
++    if (!result.success) throw new Error(result.message || 'Dean question rules are not configured.');
++    currentSlotsData = currentSlotsData.map(slot => {
++      const rule = result.rules[String(slot.slot_number)];
++      return {...slot,k_level:rule?.k_level || '',co_level:rule?.co_level || ''};
++    });
++    try {
++      const remarkResponse = await fetch('<?php echo getBaseUrl(); ?>/api/remarks.php', {
++        method:'POST', headers:{'Content-Type':'application/json'},
++        body:JSON.stringify({action:'list',csrf:<?=json_encode($_SESSION['qps_review_csrf'])?>,paper_code:currentCourseCode})
++      });
++      const remarkData = await remarkResponse.json();
++      if (remarkData.success) {
++        const remarksBySlot = {};
++        (remarkData.remarks || []).filter(r=>r.target_type==='FINAL_SLOT').forEach(r=>{remarksBySlot[String(r.target_ref)]=r.remark_text;});
++        currentSlotsData = currentSlotsData.map(slot=>({...slot,remark_text:remarksBySlot[String(slot.slot_key)] || remarksBySlot['Q'+slot.slot_number] || ''}));
++      }
++    } catch (remarkError) { console.warn('Unable to load final-slot remarks', remarkError); }
++    slotRuleError = '';
++  } catch (error) {
++    currentSlotsData = currentSlotsData.map(slot => ({...slot,k_level:'',co_level:''}));
++    slotRuleError = error.message;
++  }
++}
++
+ async function loadCourseData(courseCode) {
+   if (!courseCode) return;
+   coeApprovedQuestions = [];
+@@ -1292,13 +1344,17 @@
+         const slotData = await slotRes.json();
+         if (slotData.success && slotData.slots && slotData.slots.length) {
+           currentSlotsData = slotData.slots;
++          currentFinalBlueprintId = Number(slotData.blueprint?.id || 0);
+         } else {
+           currentSlotsData = getDefaultSlotTemplates(true);
++          currentFinalBlueprintId = 0;
+         }
+       } catch (e) {
+         currentSlotsData = getDefaultSlotTemplates(true);
++        currentFinalBlueprintId = 0;
+       }
+ 
++      await resolveSlotRules();
+       renderBlueprintMatrix();
+       renderSlotAllocationTable();
+       renderQuestionsList();
+@@ -1384,6 +1440,7 @@
+   }
+ 
+   const payload = {
++    csrf: <?=json_encode($_SESSION['qps_review_csrf'])?>,
+     action: 'save_question',
+     question_id: editId,
+     paper_code: currentCourseCode,
+@@ -1569,7 +1626,7 @@
+     const res = await fetch('<?php echo getBaseUrl(); ?>/api/save_draft_question.php', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+-      body: JSON.stringify({ action: 'delete_question', question_id: qId })
++      body: JSON.stringify({ action: 'delete_question', question_id: qId, csrf: <?=json_encode($_SESSION['qps_review_csrf'])?> })
+     });
+     const data = await res.json();
+     if (data.success) {
+@@ -1603,10 +1660,17 @@
+   if (!result.isConfirmed) return;
+ 
+   try {
+-    const res = await fetch('<?php echo getBaseUrl(); ?>/api/save_draft_question.php', {
++    if (!currentDraft?.id) throw new Error('Save the question bank draft before submitting.');
++    if (!currentFinalBlueprintId) throw new Error('Save the Final Question Paper Blueprint before submitting.');
++    const res = await fetch('<?php echo getBaseUrl(); ?>/api/workflow.php', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+-      body: JSON.stringify({ action: 'submit_to_hod', paper_code: currentCourseCode })
++      body: JSON.stringify({
++        action: 'staff_submit',
++        csrf: <?=json_encode($_SESSION['qps_review_csrf'])?>,
++        bank_draft_id: Number(currentDraft.id),
++        final_blueprint_id: Number(currentFinalBlueprintId)
++      })
+     });
+     const data = await res.json();
+ 

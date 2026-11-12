@@ -1,0 +1,36 @@
+-- COE File Manager / review remarks migration (MariaDB/MySQL)
+-- Generated papers are soft-deleted for five full days; do not delete recoverable rows.
+ALTER TABLE generated_papers
+  ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL,
+  ADD COLUMN IF NOT EXISTS deleted_by VARCHAR(100) NULL,
+  ADD COLUMN IF NOT EXISTS restored_at DATETIME NULL,
+  ADD COLUMN IF NOT EXISTS restored_by VARCHAR(100) NULL,
+  ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL;
+
+ALTER TABLE question_banks
+  ADD COLUMN IF NOT EXISTS hod_remarks TEXT NULL,
+  ADD COLUMN IF NOT EXISTS coe_remarks TEXT NULL;
+
+CREATE TABLE IF NOT EXISTS qps_review_remarks_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  draft_question_id BIGINT UNSIGNED NOT NULL,
+  draft_id BIGINT UNSIGNED NULL,
+  paper_code VARCHAR(100) NULL,
+  actor_staff_code VARCHAR(100) NOT NULL,
+  actor_role VARCHAR(50) NULL,
+  action_code VARCHAR(40) NOT NULL,
+  remarks TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_qps_remark_question (draft_question_id, created_at),
+  KEY idx_qps_remark_paper (paper_code, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS generated_paper_remarks (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  paper_id BIGINT UNSIGNED NOT NULL,
+  actor_staff_code VARCHAR(100) NOT NULL,
+  actor_role VARCHAR(50) NULL,
+  remarks TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_gpr_paper (paper_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

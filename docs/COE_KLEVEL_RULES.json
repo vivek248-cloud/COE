@@ -1,0 +1,42 @@
+{
+  "section_A": {
+    "count": 20,
+    "marks": 1,
+    "k_levels": [
+      "K1",
+      "K2"
+    ]
+  },
+  "section_B": {
+    "count": 5,
+    "marks": 5,
+    "k_levels": [
+      "K1",
+      "K2",
+      "K3"
+    ]
+  },
+  "section_C": {
+    "count": 4,
+    "marks": 10,
+    "k_levels": [
+      "K2",
+      "K3",
+      "K4",
+      "K5"
+    ]
+  },
+  "section_D": {
+    "count": 1,
+    "marks": 10,
+    "k_levels": [
+      "K3",
+      "K4",
+      "K5",
+      "K6"
+    ],
+    "compulsory": true
+  },
+  "total_selected": 30,
+  "previous_year_rule": "same course/paper + same semester + immediately previous academic year"
+}

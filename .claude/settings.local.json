@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l modules/teaching/upload.php)",
+      "Bash(php -l c:\\\\xampp\\\\htdocs\\\\Question-Paper-System-new\\\\modules\\\\dean\\\\question_rules.php)",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"USE hccweb; DESCRIBE course_submissions;\" 2>&1)"
+    ]
+  }
+}
